@@ -1,0 +1,6 @@
+name: AntiVPN
+main: ru.violence.antivpn.AntiVPNPlugin
+version: ${project.version}
+author: ruViolence
+depends:
+  - CoreAPI
