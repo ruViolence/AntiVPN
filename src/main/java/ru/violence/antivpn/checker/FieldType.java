@@ -5,15 +5,15 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Locale;
 
-public enum BypassType {
+public enum FieldType {
     PLAYER_NAME,
     ISP,
     ORG,
     AS,
     ASNAME;
 
-    public static @Nullable BypassType fromString(@NotNull String typeS) {
-        for (BypassType type : values()) {
+    public static @Nullable FieldType fromString(@NotNull String typeS) {
+        for (FieldType type : values()) {
             if (type.toKey().equals(typeS)) {
                 return type;
             }

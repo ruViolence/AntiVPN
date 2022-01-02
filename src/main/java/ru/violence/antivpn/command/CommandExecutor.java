@@ -4,8 +4,8 @@ import net.md_5.bungee.api.CommandSender;
 import net.md_5.bungee.api.chat.TextComponent;
 import net.md_5.bungee.api.plugin.Command;
 import ru.violence.antivpn.AntiVPNPlugin;
-import ru.violence.antivpn.checker.BypassType;
 import ru.violence.antivpn.checker.CheckResult;
+import ru.violence.antivpn.checker.FieldType;
 import ru.violence.antivpn.util.Utils;
 
 import java.util.Arrays;
@@ -22,6 +22,10 @@ public class CommandExecutor extends Command {
     @Override
     public void execute(CommandSender sender, String[] args) {
         switch (args.length > 0 ? args[0].toLowerCase(Locale.ROOT) : "") {
+            case "block": {
+                handleBlockCommand(sender, Arrays.copyOfRange(args, 1, args.length));
+                break;
+            }
             case "bypass": {
                 handleBypassCommand(sender, Arrays.copyOfRange(args, 1, args.length));
                 break;
@@ -36,13 +40,36 @@ public class CommandExecutor extends Command {
         }
     }
 
+    private void handleBlockCommand(CommandSender sender, String[] args) {
+        if (args.length < 2) {
+            sender.sendMessage(TextComponent.fromLegacyText("§cUsage: /antivpn block <type> <value>"));
+            return;
+        }
+
+        FieldType type = FieldType.fromString(args[0]);
+        String value = Utils.joinArgs(args, 1);
+
+        if (type == null) {
+            sender.sendMessage(TextComponent.fromLegacyText("§cUnknown type."));
+            return;
+        }
+
+        boolean isEnabled = plugin.getIpChecker().toggleBlock(type, value);
+
+        if (isEnabled) {
+            sender.sendMessage(TextComponent.fromLegacyText("§aBlock for \"" + type + "\" \"" + value + "\" has been enabled."));
+        } else {
+            sender.sendMessage(TextComponent.fromLegacyText("§cBlock for \"" + type + "\" \"" + value + "\" has been disabled."));
+        }
+    }
+
     private void handleBypassCommand(CommandSender sender, String[] args) {
         if (args.length < 2) {
             sender.sendMessage(TextComponent.fromLegacyText("§cUsage: /antivpn bypass <type> <value>"));
             return;
         }
 
-        BypassType type = BypassType.fromString(args[0]);
+        FieldType type = FieldType.fromString(args[0]);
         String value = Utils.joinArgs(args, 1);
 
         if (type == null) {
@@ -71,18 +98,27 @@ public class CommandExecutor extends Command {
             CheckResult result = plugin.getIpChecker().check(ip);
             sender.sendMessage(TextComponent.fromLegacyText("§aResult: " + result.getJson().toString()));
 
-            String sb = "§aBypasses: ";
-            sb += BypassType.ISP.toKey() + "=" + plugin.getIpChecker().isBypassed(BypassType.ISP, result.getIsp()) + ", ";
-            sb += BypassType.ORG.toKey() + "=" + plugin.getIpChecker().isBypassed(BypassType.ORG, result.getOrg()) + ", ";
-            sb += BypassType.AS.toKey() + "=" + plugin.getIpChecker().isBypassed(BypassType.AS, result.getAs()) + ", ";
-            sb += BypassType.ASNAME.toKey() + "=" + plugin.getIpChecker().isBypassed(BypassType.ASNAME, result.getAsname());
-            sender.sendMessage(TextComponent.fromLegacyText(sb));
+            String s;
+
+            s = "§aBlocks: ";
+            s += FieldType.ISP.toKey() + "=" + plugin.getIpChecker().isBlocked(FieldType.ISP, result.getIsp()) + ", ";
+            s += FieldType.ORG.toKey() + "=" + plugin.getIpChecker().isBlocked(FieldType.ORG, result.getOrg()) + ", ";
+            s += FieldType.AS.toKey() + "=" + plugin.getIpChecker().isBlocked(FieldType.AS, result.getAs()) + ", ";
+            s += FieldType.ASNAME.toKey() + "=" + plugin.getIpChecker().isBlocked(FieldType.ASNAME, result.getAsname());
+            sender.sendMessage(TextComponent.fromLegacyText(s));
+
+            s = "§aBypasses: ";
+            s += FieldType.ISP.toKey() + "=" + plugin.getIpChecker().isBypassed(FieldType.ISP, result.getIsp()) + ", ";
+            s += FieldType.ORG.toKey() + "=" + plugin.getIpChecker().isBypassed(FieldType.ORG, result.getOrg()) + ", ";
+            s += FieldType.AS.toKey() + "=" + plugin.getIpChecker().isBypassed(FieldType.AS, result.getAs()) + ", ";
+            s += FieldType.ASNAME.toKey() + "=" + plugin.getIpChecker().isBypassed(FieldType.ASNAME, result.getAsname());
+            sender.sendMessage(TextComponent.fromLegacyText(s));
         } catch (Exception e) {
             sender.sendMessage(TextComponent.fromLegacyText("§cError: " + e.getMessage()));
         }
     }
 
     private void sendHelp(CommandSender sender) {
-        sender.sendMessage(TextComponent.fromLegacyText("§cUsage: /antivpn <bypass|check>"));
+        sender.sendMessage(TextComponent.fromLegacyText("§cUsage: /antivpn <block|bypass|check>"));
     }
 }

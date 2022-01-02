@@ -12,8 +12,8 @@ import net.md_5.bungee.api.event.PreLoginEvent;
 import net.md_5.bungee.api.plugin.Listener;
 import net.md_5.bungee.event.EventHandler;
 import ru.violence.antivpn.AntiVPNPlugin;
-import ru.violence.antivpn.checker.BypassType;
 import ru.violence.antivpn.checker.CheckResult;
+import ru.violence.antivpn.checker.FieldType;
 import ru.violence.antivpn.checker.IPChecker;
 
 import java.net.InetSocketAddress;
@@ -36,17 +36,25 @@ public class PreLoginListener implements Listener {
             IPChecker checker = plugin.getIpChecker();
             CheckResult result = checker.check(playerIp);
 
-            if (checker.isBypassed(BypassType.PLAYER_NAME, playerName)
-                    || checker.isBypassed(BypassType.ISP, result.getIsp())
-                    || checker.isBypassed(BypassType.ORG, result.getOrg())
-                    || checker.isBypassed(BypassType.AS, result.getAs())
-                    || checker.isBypassed(BypassType.ASNAME, result.getAsname())) {
+            if (checker.isBypassed(FieldType.PLAYER_NAME, playerName)
+                    || checker.isBypassed(FieldType.ISP, result.getIsp())
+                    || checker.isBypassed(FieldType.ORG, result.getOrg())
+                    || checker.isBypassed(FieldType.AS, result.getAs())
+                    || checker.isBypassed(FieldType.ASNAME, result.getAsname())) {
                 return;
             }
 
             boolean isDenied = result.isProxy();
 
             if (!isDenied && plugin.getConfig().getBoolean("deny-hostings") && result.isHosting()) {
+                isDenied = true;
+            }
+
+            if (checker.isBlocked(FieldType.PLAYER_NAME, playerName)
+                    || checker.isBlocked(FieldType.ISP, result.getIsp())
+                    || checker.isBlocked(FieldType.ORG, result.getOrg())
+                    || checker.isBlocked(FieldType.AS, result.getAs())
+                    || checker.isBlocked(FieldType.ASNAME, result.getAsname())) {
                 isDenied = true;
             }
 

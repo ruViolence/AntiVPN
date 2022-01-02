@@ -37,6 +37,8 @@ public class IPChecker implements AutoCloseable {
                 st.execute("CREATE TABLE IF NOT EXISTS `check_cache`(`id` INTEGER NOT NULL UNIQUE, `ip` TEXT NOT NULL UNIQUE, `result` TEXT NOT NULL, `since` INTEGER NOT NULL, PRIMARY KEY (`id` AUTOINCREMENT));");
                 st.execute("CREATE UNIQUE INDEX IF NOT EXISTS `check_cache_ip` ON `check_cache` (`ip`);");
                 st.execute("CREATE INDEX IF NOT EXISTS `check_cache_since` ON `check_cache` (`since`);");
+                st.execute("CREATE TABLE IF NOT EXISTS `block`(`id` INTEGER NOT NULL UNIQUE, `type` TEXT NOT NULL, `value` TEXT NOT NULL, `since` INTEGER NOT NULL, PRIMARY KEY(`id` AUTOINCREMENT));");
+                st.execute("CREATE INDEX IF NOT EXISTS `block_type_value` ON `block` (`type`, `value`);");
                 st.execute("CREATE TABLE IF NOT EXISTS `bypass`(`id` INTEGER NOT NULL UNIQUE, `type` TEXT NOT NULL, `value` TEXT NOT NULL, `since` INTEGER NOT NULL, PRIMARY KEY(`id` AUTOINCREMENT));");
                 st.execute("CREATE INDEX IF NOT EXISTS `bypass_type_value` ON `bypass` (`type`, `value`);");
             }
@@ -106,7 +108,19 @@ public class IPChecker implements AutoCloseable {
     }
 
     @SneakyThrows
-    public boolean isBypassed(@NotNull BypassType type, @NotNull String value) {
+    public boolean isBlocked(@NotNull FieldType type, @NotNull String value) {
+        synchronized (connection) {
+            try (PreparedStatement ps = connection.prepareStatement("SELECT `id` FROM `block` WHERE `type` = ? AND `value` = ?")) {
+                ps.setString(1, type.toKey());
+                ps.setString(2, value);
+                ResultSet rs = ps.executeQuery();
+                return rs.next();
+            }
+        }
+    }
+
+    @SneakyThrows
+    public boolean isBypassed(@NotNull FieldType type, @NotNull String value) {
         synchronized (connection) {
             try (PreparedStatement ps = connection.prepareStatement("SELECT `id` FROM `bypass` WHERE `type` = ? AND `value` = ?")) {
                 ps.setString(1, type.toKey());
@@ -118,7 +132,31 @@ public class IPChecker implements AutoCloseable {
     }
 
     @SneakyThrows
-    public boolean toggleBypass(@NotNull BypassType type, @NotNull String value) {
+    public boolean toggleBlock(@NotNull FieldType type, @NotNull String value) {
+        synchronized (connection) {
+            boolean isBlocked = isBlocked(type, value);
+
+            if (isBlocked) {
+                try (PreparedStatement ps = connection.prepareStatement("DELETE FROM `block` WHERE `type` = ? AND `value` = ?")) {
+                    ps.setString(1, type.toKey());
+                    ps.setString(2, value);
+                    ps.execute();
+                }
+            } else {
+                try (PreparedStatement ps = connection.prepareStatement("INSERT INTO `block`(`type`, `value`, `since`) VALUES (?, ?, ?)")) {
+                    ps.setString(1, type.toKey());
+                    ps.setString(2, value);
+                    ps.setLong(3, System.currentTimeMillis());
+                    ps.execute();
+                }
+            }
+
+            return !isBlocked;
+        }
+    }
+
+    @SneakyThrows
+    public boolean toggleBypass(@NotNull FieldType type, @NotNull String value) {
         synchronized (connection) {
             boolean isBypassed = isBypassed(type, value);
 
