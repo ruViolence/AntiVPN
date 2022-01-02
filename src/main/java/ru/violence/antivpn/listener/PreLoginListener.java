@@ -53,7 +53,7 @@ public class PreLoginListener implements Listener {
             if (isDenied) {
                 event.setCancelReason(TextComponent.fromLegacyText(plugin.getConfig().getString("kick-reason")));
                 event.setCancelled(true);
-                ProxyServer.getInstance().getConsole().sendMessage(TextComponent.fromLegacyText("§c[AntiVPN] " + playerName + " detected as a proxy."));
+                ProxyServer.getInstance().getConsole().sendMessage(TextComponent.fromLegacyText("§c[AntiVPN] " + playerName + " detected as a proxy: " + playerIp));
                 notifyStaff(playerName, playerIp, result);
             }
         } catch (Exception ignored) {
