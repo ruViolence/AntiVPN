@@ -56,10 +56,10 @@ public class IPChecker implements AutoCloseable {
     }
 
     public @NotNull CheckResult check(@NotNull String ip) throws Exception {
-        if (isTimedOut()) throw TimedOutException.INSTANCE;
-
         String cached = getFromCache(ip);
         if (cached != null) return new CheckResult(cached);
+
+        if (isTimedOut()) throw TimedOutException.INSTANCE;
 
         try {
             String jsonString = Utils.readStringFromUrl(StringReplacer.replace(API_URL, "{query}", ip));
