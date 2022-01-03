@@ -94,28 +94,30 @@ public class CommandExecutor extends Command {
 
         String ip = args[0];
 
-        try {
-            CheckResult result = plugin.getIpChecker().check(ip);
-            sender.sendMessage(TextComponent.fromLegacyText("§aResult: " + result.getJson().toString()));
+        new Thread(() -> {
+            try {
+                CheckResult result = plugin.getIpChecker().check(ip);
+                sender.sendMessage(TextComponent.fromLegacyText("§aResult: " + result.getJson().toString()));
 
-            String s;
+                String s;
 
-            s = "§aBlocks: ";
-            s += FieldType.ISP.toKey() + "=" + plugin.getIpChecker().isBlocked(FieldType.ISP, result.getIsp()) + ", ";
-            s += FieldType.ORG.toKey() + "=" + plugin.getIpChecker().isBlocked(FieldType.ORG, result.getOrg()) + ", ";
-            s += FieldType.AS.toKey() + "=" + plugin.getIpChecker().isBlocked(FieldType.AS, result.getAs()) + ", ";
-            s += FieldType.ASNAME.toKey() + "=" + plugin.getIpChecker().isBlocked(FieldType.ASNAME, result.getAsname());
-            sender.sendMessage(TextComponent.fromLegacyText(s));
+                s = "§aBlocks: ";
+                s += FieldType.ISP.toKey() + "=" + plugin.getIpChecker().isBlocked(FieldType.ISP, result.getIsp()) + ", ";
+                s += FieldType.ORG.toKey() + "=" + plugin.getIpChecker().isBlocked(FieldType.ORG, result.getOrg()) + ", ";
+                s += FieldType.AS.toKey() + "=" + plugin.getIpChecker().isBlocked(FieldType.AS, result.getAs()) + ", ";
+                s += FieldType.ASNAME.toKey() + "=" + plugin.getIpChecker().isBlocked(FieldType.ASNAME, result.getAsname());
+                sender.sendMessage(TextComponent.fromLegacyText(s));
 
-            s = "§aBypasses: ";
-            s += FieldType.ISP.toKey() + "=" + plugin.getIpChecker().isBypassed(FieldType.ISP, result.getIsp()) + ", ";
-            s += FieldType.ORG.toKey() + "=" + plugin.getIpChecker().isBypassed(FieldType.ORG, result.getOrg()) + ", ";
-            s += FieldType.AS.toKey() + "=" + plugin.getIpChecker().isBypassed(FieldType.AS, result.getAs()) + ", ";
-            s += FieldType.ASNAME.toKey() + "=" + plugin.getIpChecker().isBypassed(FieldType.ASNAME, result.getAsname());
-            sender.sendMessage(TextComponent.fromLegacyText(s));
-        } catch (Exception e) {
-            sender.sendMessage(TextComponent.fromLegacyText("§cError: " + e.getMessage()));
-        }
+                s = "§aBypasses: ";
+                s += FieldType.ISP.toKey() + "=" + plugin.getIpChecker().isBypassed(FieldType.ISP, result.getIsp()) + ", ";
+                s += FieldType.ORG.toKey() + "=" + plugin.getIpChecker().isBypassed(FieldType.ORG, result.getOrg()) + ", ";
+                s += FieldType.AS.toKey() + "=" + plugin.getIpChecker().isBypassed(FieldType.AS, result.getAs()) + ", ";
+                s += FieldType.ASNAME.toKey() + "=" + plugin.getIpChecker().isBypassed(FieldType.ASNAME, result.getAsname());
+                sender.sendMessage(TextComponent.fromLegacyText(s));
+            } catch (Exception e) {
+                sender.sendMessage(TextComponent.fromLegacyText("§cError: " + e.getMessage()));
+            }
+        }).start();
     }
 
     private void sendHelp(CommandSender sender) {
