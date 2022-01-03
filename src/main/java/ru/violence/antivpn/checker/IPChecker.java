@@ -1,6 +1,7 @@
 package ru.violence.antivpn.checker;
 
 import lombok.SneakyThrows;
+import net.md_5.bungee.api.ProxyServer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import ru.violence.antivpn.AntiVPNPlugin;
@@ -14,6 +15,7 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.util.concurrent.TimeUnit;
 
 @SuppressWarnings({"SqlResolve", "SqlNoDataSourceInspection", "HttpUrlsUsage"})
 public class IPChecker implements AutoCloseable {
@@ -28,6 +30,7 @@ public class IPChecker implements AutoCloseable {
         this.plugin = plugin;
         this.connection = DriverManager.getConnection("jdbc:sqlite://" + plugin.getDataFolder().getAbsolutePath() + "/data.db");
         createTables();
+        ProxyServer.getInstance().getScheduler().schedule(plugin, new CacheCleanerTask(), 0, 1, TimeUnit.HOURS);
     }
 
     @SneakyThrows
@@ -176,6 +179,22 @@ public class IPChecker implements AutoCloseable {
             }
 
             return !isBypassed;
+        }
+    }
+
+    private class CacheCleanerTask implements Runnable {
+        @SneakyThrows
+        @Override
+        public void run() {
+            synchronized (connection) {
+                try (PreparedStatement ps = connection.prepareStatement("DELETE FROM `check_cache` WHERE `since` <= ?")) {
+                    ps.setLong(1, System.currentTimeMillis() - plugin.getConfig().getLong("cache-lifetime"));
+                    int deleted = ps.executeUpdate();
+                    if (deleted != 0) {
+                        plugin.getLogger().info("Deleted " + deleted + " expired cache entries");
+                    }
+                }
+            }
         }
     }
 }
