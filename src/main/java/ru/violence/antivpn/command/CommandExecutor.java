@@ -87,7 +87,7 @@ public class CommandExecutor extends Command {
     }
 
     private void handleCheckCommand(CommandSender sender, String[] args) {
-        if (args.length == 0) {
+        if (args.length == 0 || args[0].isEmpty()) {
             sender.sendMessage(TextComponent.fromLegacyText("§cUsage: /antivpn check <ip>"));
             return;
         }
