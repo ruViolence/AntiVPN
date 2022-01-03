@@ -1,3 +1,4 @@
 cache-lifetime: 604800000 # 7 Days
 kick-reason: "ACCESS DENIED"
 deny-hostings: false
+force-check: false

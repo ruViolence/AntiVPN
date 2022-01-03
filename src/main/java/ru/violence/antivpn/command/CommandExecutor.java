@@ -96,7 +96,7 @@ public class CommandExecutor extends Command {
 
         new Thread(() -> {
             try {
-                CheckResult result = plugin.getIpChecker().check(ip);
+                CheckResult result = plugin.getIpChecker().check(ip).get();
                 sender.sendMessage(TextComponent.fromLegacyText("§aResult: " + result.getJson().toString()));
 
                 String s;

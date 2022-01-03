@@ -15,12 +15,17 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 @SuppressWarnings({"SqlResolve", "SqlNoDataSourceInspection", "HttpUrlsUsage"})
 public class IPChecker implements AutoCloseable {
     private static final String API_URL = "http://ip-api.com/json/{query}?fields=21188127";
     private static final long TIMEOUT = 15 * 1000; // 15 Seconds
+    private final ExecutorService executorService = Executors.newCachedThreadPool();
     private final AntiVPNPlugin plugin;
     private final Connection connection;
     private long timeoutTime = 0;
@@ -55,26 +60,55 @@ public class IPChecker implements AutoCloseable {
         }
     }
 
-    public @NotNull CheckResult check(@NotNull String ip) throws Exception {
-        String cached = getFromCache(ip);
-        if (cached != null) return new CheckResult(cached);
+    public @NotNull Future<CheckResult> check(@NotNull String ip) {
+        CompletableFuture<CheckResult> future = new CompletableFuture<>();
+        executorService.execute(new Runnable() {
+            private final boolean forceCheck = plugin.getConfig().getBoolean("force-check");
 
-        if (isTimedOut()) throw TimedOutException.INSTANCE;
+            @Override
+            public void run() {
+                while (true) {
+                    String cached = getFromCache(ip);
+                    if (cached != null) {
+                        future.complete(new CheckResult(cached));
+                        return;
+                    }
 
-        try {
-            String jsonString = Utils.readStringFromUrl(StringReplacer.replace(API_URL, "{query}", ip));
-            CheckResult result = new CheckResult(jsonString);
+                    if (isTimedOut()) {
+                        if (forceCheck) {
+                            try {
+                                Thread.sleep(1000);
+                            } catch (InterruptedException e) {return;}
+                            continue;
+                        } else {
+                            future.completeExceptionally(TimedOutException.INSTANCE);
+                            return;
+                        }
+                    }
 
-            if (!result.getStatus().equals("success")) {
-                throw new Exception("Unsuccessful IP query \"" + ip + "\": " + jsonString);
+                    try {
+                        String jsonString = Utils.readStringFromUrl(StringReplacer.replace(API_URL, "{query}", ip));
+                        CheckResult result = new CheckResult(jsonString);
+
+                        if (!result.getStatus().equals("success")) {
+                            future.completeExceptionally(new Exception("Unsuccessful IP query \"" + ip + "\": " + jsonString));
+                            return;
+                        }
+
+                        putToCache(ip, jsonString);
+                        future.complete(result);
+                        return;
+                    } catch (IOException e) {
+                        setTimeout();
+                        if (!forceCheck) {
+                            future.completeExceptionally(e);
+                            return;
+                        }
+                    }
+                }
             }
-
-            putToCache(ip, jsonString);
-            return result;
-        } catch (IOException e) {
-            setTimeout();
-            throw e;
-        }
+        });
+        return future;
     }
 
     private boolean isTimedOut() {

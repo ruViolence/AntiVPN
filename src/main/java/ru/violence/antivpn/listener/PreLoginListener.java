@@ -34,7 +34,7 @@ public class PreLoginListener implements Listener {
             String playerIp = ((InetSocketAddress) event.getConnection().getSocketAddress()).getAddress().getHostAddress();
 
             IPChecker checker = plugin.getIpChecker();
-            CheckResult result = checker.check(playerIp);
+            CheckResult result = checker.check(playerIp).get();
 
             if (checker.isBypassed(FieldType.PLAYER_NAME, playerName)
                     || checker.isBypassed(FieldType.ISP, result.getIsp())
