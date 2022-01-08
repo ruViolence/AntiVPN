@@ -62,50 +62,31 @@ public class IPChecker implements AutoCloseable {
 
     public @NotNull Future<CheckResult> check(@NotNull String ip) {
         CompletableFuture<CheckResult> future = new CompletableFuture<>();
-        executorService.execute(new Runnable() {
-            private final boolean forceCheck = plugin.getConfig().getBoolean("force-check");
+        executorService.execute(() -> {
+            String cached = getFromCache(ip);
+            if (cached != null) {
+                future.complete(new CheckResult(cached));
+                return;
+            }
 
-            @Override
-            public void run() {
-                while (true) {
-                    String cached = getFromCache(ip);
-                    if (cached != null) {
-                        future.complete(new CheckResult(cached));
-                        return;
-                    }
+            if (isTimedOut()) {
+                future.completeExceptionally(TimedOutException.INSTANCE);
+            }
 
-                    if (isTimedOut()) {
-                        if (forceCheck) {
-                            try {
-                                Thread.sleep(1000);
-                            } catch (InterruptedException e) {return;}
-                            continue;
-                        } else {
-                            future.completeExceptionally(TimedOutException.INSTANCE);
-                            return;
-                        }
-                    }
+            try {
+                String jsonString = Utils.readStringFromUrl(StringReplacer.replace(API_URL, "{query}", ip));
+                CheckResult result = new CheckResult(jsonString);
 
-                    try {
-                        String jsonString = Utils.readStringFromUrl(StringReplacer.replace(API_URL, "{query}", ip));
-                        CheckResult result = new CheckResult(jsonString);
-
-                        if (!result.getStatus().equals("success")) {
-                            future.completeExceptionally(new Exception("Unsuccessful IP query \"" + ip + "\": " + jsonString));
-                            return;
-                        }
-
-                        putToCache(ip, jsonString);
-                        future.complete(result);
-                        return;
-                    } catch (IOException e) {
-                        setTimeout();
-                        if (!forceCheck) {
-                            future.completeExceptionally(e);
-                            return;
-                        }
-                    }
+                if (!result.getStatus().equals("success")) {
+                    future.completeExceptionally(new Exception("Unsuccessful IP query \"" + ip + "\": " + jsonString));
+                    return;
                 }
+
+                putToCache(ip, jsonString);
+                future.complete(result);
+            } catch (IOException e) {
+                setTimeout();
+                future.completeExceptionally(e);
             }
         });
         return future;

@@ -17,6 +17,7 @@ import ru.violence.antivpn.checker.FieldType;
 import ru.violence.antivpn.checker.IPChecker;
 
 import java.net.InetSocketAddress;
+import java.util.concurrent.TimeUnit;
 
 public class PreLoginListener implements Listener {
     private final AntiVPNPlugin plugin;
@@ -34,7 +35,7 @@ public class PreLoginListener implements Listener {
             String playerIp = ((InetSocketAddress) event.getConnection().getSocketAddress()).getAddress().getHostAddress();
 
             IPChecker checker = plugin.getIpChecker();
-            CheckResult result = checker.check(playerIp).get();
+            CheckResult result = checker.check(playerIp).get(1500, TimeUnit.MILLISECONDS);
 
             if (checker.isBypassed(FieldType.PLAYER_NAME, playerName)
                     || checker.isBypassed(FieldType.ISP, result.getIsp())
@@ -64,7 +65,11 @@ public class PreLoginListener implements Listener {
                 ProxyServer.getInstance().getConsole().sendMessage(TextComponent.fromLegacyText("§c[AntiVPN] " + playerName + " detected as a proxy: " + playerIp));
                 notifyStaff(playerName, playerIp, result);
             }
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            if (plugin.getConfig().getBoolean("force-check")) {
+                event.setCancelReason(TextComponent.fromLegacyText(plugin.getConfig().getString("force-kick-reason")));
+                event.setCancelled(true);
+            }
         } finally {
             event.completeIntent(plugin);
         }
