@@ -24,7 +24,6 @@ import java.util.concurrent.TimeUnit;
 @SuppressWarnings({"SqlResolve", "SqlNoDataSourceInspection", "HttpUrlsUsage"})
 public class IPChecker implements AutoCloseable {
     private static final String API_URL = "http://ip-api.com/json/{query}?fields=21188127";
-    private static final long TIMEOUT = 15 * 1000; // 15 Seconds
     private final ExecutorService executorService = Executors.newCachedThreadPool();
     private final AntiVPNPlugin plugin;
     private final Connection connection;
@@ -97,7 +96,7 @@ public class IPChecker implements AutoCloseable {
     }
 
     private void setTimeout() {
-        this.timeoutTime = System.currentTimeMillis() + TIMEOUT;
+        this.timeoutTime = System.currentTimeMillis() + plugin.getConfig().getLong("timeout");
     }
 
     @SneakyThrows

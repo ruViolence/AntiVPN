@@ -3,3 +3,4 @@ kick-reason: "ACCESS DENIED"
 deny-hostings: false
 force-check: false
 force-kick-reason: "Please, wait..."
+timeout: 15000 # 15 Seconds
