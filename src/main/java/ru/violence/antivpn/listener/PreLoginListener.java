@@ -28,6 +28,8 @@ public class PreLoginListener implements Listener {
 
     @EventHandler
     public void onPreLogin(PreLoginEvent event) {
+        if (event.isCancelled()) return;
+
         try {
             event.registerIntent(plugin);
 
