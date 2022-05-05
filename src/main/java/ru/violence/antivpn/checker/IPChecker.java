@@ -1,11 +1,15 @@
 package ru.violence.antivpn.checker;
 
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.collect.Sets;
+import lombok.Data;
 import lombok.SneakyThrows;
 import net.md_5.bungee.api.ProxyServer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import ru.violence.antivpn.AntiVPNPlugin;
-import ru.violence.antivpn.checker.exception.TimedOutException;
+import ru.violence.antivpn.util.FastException;
 import ru.violence.antivpn.util.Utils;
 import ru.violence.coreapi.common.util.StringReplacer;
 
@@ -15,25 +19,27 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.util.Iterator;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 @SuppressWarnings({"SqlResolve", "SqlNoDataSourceInspection", "HttpUrlsUsage"})
 public class IPChecker implements AutoCloseable {
     private static final String API_URL = "http://ip-api.com/json/{query}?fields=21188127";
-    private final ExecutorService executorService = Executors.newCachedThreadPool();
+    private final Cache<String, CheckResult> cache = CacheBuilder.newBuilder().expireAfterAccess(10, TimeUnit.MINUTES).build();
+    private final Set<QueueEntry> queue = Sets.newConcurrentHashSet();
     private final AntiVPNPlugin plugin;
     private final Connection connection;
-    private long timeoutTime = 0;
+    private long cooldownTime = 0;
 
     public IPChecker(AntiVPNPlugin plugin) throws Exception {
         Class.forName("org.sqlite.JDBC").newInstance();
         this.plugin = plugin;
         this.connection = DriverManager.getConnection("jdbc:sqlite://" + plugin.getDataFolder().getAbsolutePath() + "/data.db");
         createTables();
+        new QueueTask().start();
         ProxyServer.getInstance().getScheduler().schedule(plugin, new CacheCleanerTask(), 0, 1, TimeUnit.HOURS);
     }
 
@@ -61,53 +67,47 @@ public class IPChecker implements AutoCloseable {
 
     public @NotNull Future<CheckResult> check(@NotNull String ip) {
         CompletableFuture<CheckResult> future = new CompletableFuture<>();
-        executorService.execute(() -> {
-            String cached = getFromCache(ip);
-            if (cached != null) {
-                future.complete(new CheckResult(cached));
-                return;
-            }
 
-            if (isTimedOut()) {
-                future.completeExceptionally(TimedOutException.INSTANCE);
-            }
+        CheckResult memoryResult = getFromMemoryCache(ip);
+        if (memoryResult != null) {
+            future.complete(memoryResult);
+            return future;
+        }
 
-            try {
-                String jsonString = Utils.readStringFromUrl(StringReplacer.replace(API_URL, "{query}", ip));
-                CheckResult result = new CheckResult(jsonString);
+        queue.add(new QueueEntry(ip, future));
 
-                if (!result.getStatus().equals("success")) {
-                    future.completeExceptionally(new Exception("Unsuccessful IP query \"" + ip + "\": " + jsonString));
-                    return;
-                }
-
-                putToCache(ip, jsonString);
-                future.complete(result);
-            } catch (IOException e) {
-                setTimeout();
-                future.completeExceptionally(e);
-            }
-        });
         return future;
     }
 
-    private boolean isTimedOut() {
-        return System.currentTimeMillis() < timeoutTime;
+    private boolean isCooledDown() {
+        return System.currentTimeMillis() < cooldownTime;
     }
 
-    private void setTimeout() {
-        this.timeoutTime = System.currentTimeMillis() + plugin.getConfig().getLong("timeout");
+    private void setCooldown() {
+        this.cooldownTime = System.currentTimeMillis() + plugin.getConfig().getLong("timeout");
     }
 
     @SneakyThrows
-    private @Nullable String getFromCache(@NotNull String ip) {
+    private @Nullable CheckResult getFromMemoryCache(@NotNull String ip) {
+        return cache.getIfPresent(ip);
+    }
+
+    @SneakyThrows
+    private @Nullable CheckResult getFromCache(@NotNull String ip) {
+        CheckResult memoryCache = getFromMemoryCache(ip);
+        if (memoryCache != null) return memoryCache;
+
         synchronized (connection) {
             try (PreparedStatement ps = connection.prepareStatement("SELECT `result` FROM `check_cache` WHERE `ip` = ? AND `since` > ?")) {
                 ps.setString(1, ip);
                 ps.setLong(2, System.currentTimeMillis() - plugin.getConfig().getLong("cache-lifetime"));
                 ResultSet rs = ps.executeQuery();
                 if (!rs.next()) return null;
-                return rs.getString(1);
+
+                CheckResult result = new CheckResult(rs.getString(1));
+                cache.put(ip, result);
+
+                return result;
             }
         }
     }
@@ -193,6 +193,79 @@ public class IPChecker implements AutoCloseable {
             }
 
             return !isBypassed;
+        }
+    }
+
+    @Data
+    private static class QueueEntry {
+        private final String ip;
+        private final CompletableFuture<CheckResult> future;
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+
+            QueueEntry that = (QueueEntry) o;
+
+            return ip.equals(that.ip);
+        }
+
+        @Override
+        public int hashCode() {
+            return ip.hashCode();
+        }
+    }
+
+    private class QueueTask extends Thread {
+        @SuppressWarnings("BusyWait")
+        @Override
+        public void run() {
+            task:
+            while (true) {
+                try {
+                    Thread.sleep(10);
+
+                    if (isCooledDown()) continue;
+
+                    for (Iterator<QueueEntry> iterator = queue.iterator(); iterator.hasNext(); ) {
+                        QueueEntry entry = iterator.next();
+
+                        String ip = entry.getIp();
+                        CompletableFuture<CheckResult> future = entry.getFuture();
+
+                        CheckResult cachedResult = getFromCache(ip);
+                        if (cachedResult != null) {
+                            iterator.remove();
+                            future.complete(cachedResult);
+                            continue;
+                        }
+
+                        try {
+                            String jsonString = Utils.readStringFromUrl(StringReplacer.replace(API_URL, "{query}", ip));
+                            CheckResult result = new CheckResult(jsonString);
+
+                            if (!result.getStatus().equals("success")) {
+                                iterator.remove();
+                                future.completeExceptionally(new FastException("Unsuccessful IP query \"" + ip + "\": " + jsonString));
+                                continue;
+                            }
+
+                            putToCache(ip, jsonString);
+                            cache.put(ip, result);
+                            iterator.remove();
+                            future.complete(result);
+                        } catch (IOException e) {
+                            setCooldown();
+                            continue task;
+                        }
+                    }
+                } catch (InterruptedException e) {
+                    return;
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
         }
     }
 
