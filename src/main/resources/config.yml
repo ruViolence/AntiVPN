@@ -4,4 +4,4 @@ deny-hostings: false
 force-check: false
 force-kick-reason: "Please, wait..."
 timeout: 15000 # 15 Seconds
-result-await: 1500 # 1.5 Seconds
+result-await: 5 # 5 Milliseconds
