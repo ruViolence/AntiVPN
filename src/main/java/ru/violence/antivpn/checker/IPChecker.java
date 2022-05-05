@@ -11,7 +11,6 @@ import org.jetbrains.annotations.Nullable;
 import ru.violence.antivpn.AntiVPNPlugin;
 import ru.violence.antivpn.util.FastException;
 import ru.violence.antivpn.util.Utils;
-import ru.violence.coreapi.common.util.StringReplacer;
 
 import java.io.IOException;
 import java.sql.Connection;
@@ -27,7 +26,8 @@ import java.util.concurrent.TimeUnit;
 
 @SuppressWarnings({"SqlResolve", "SqlNoDataSourceInspection", "HttpUrlsUsage"})
 public class IPChecker implements AutoCloseable {
-    private static final String API_URL = "http://ip-api.com/json/{query}?fields=21188127";
+    private static final String API_URL_PREFIX = "http://ip-api.com/json/";
+    private static final String API_URL_SUFFIX = "?fields=21188127";
     private final Cache<String, CheckResult> cache = CacheBuilder.newBuilder().expireAfterAccess(10, TimeUnit.MINUTES).build();
     private final Set<QueueEntry> queue = Sets.newConcurrentHashSet();
     private final AntiVPNPlugin plugin;
@@ -242,7 +242,7 @@ public class IPChecker implements AutoCloseable {
                         }
 
                         try {
-                            String jsonString = Utils.readStringFromUrl(StringReplacer.replace(API_URL, "{query}", ip));
+                            String jsonString = Utils.readStringFromUrl(API_URL_PREFIX + ip + API_URL_SUFFIX);
                             CheckResult result = new CheckResult(jsonString);
 
                             if (!result.getStatus().equals("success")) {

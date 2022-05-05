@@ -36,13 +36,6 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>localhost</groupId>
-            <artifactId>CoreAPI</artifactId>
-            <version>1</version>
-            <scope>system</scope>
-            <systemPath>${pom.basedir}/libs/CoreAPI.jar</systemPath>
-        </dependency>
-        <dependency>
             <groupId>org.jetbrains</groupId>
             <artifactId>annotations</artifactId>
             <version>23.0.0</version>
