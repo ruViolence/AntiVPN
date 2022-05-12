@@ -27,7 +27,7 @@ import java.util.concurrent.TimeUnit;
 @SuppressWarnings({"SqlResolve", "SqlNoDataSourceInspection", "HttpUrlsUsage"})
 public class IPChecker implements AutoCloseable {
     private static final String API_URL_PREFIX = "http://ip-api.com/json/";
-    private static final String API_URL_SUFFIX = "?fields=21188127";
+    private static final String API_URL_SUFFIX = "?fields=21122560";
     private final Cache<String, CheckResult> cache = CacheBuilder.newBuilder().expireAfterAccess(10, TimeUnit.MINUTES).build();
     private final Set<QueueEntry> queue = Sets.newConcurrentHashSet();
     private final AntiVPNPlugin plugin;
