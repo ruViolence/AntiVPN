@@ -38,7 +38,7 @@ public class IPChecker implements AutoCloseable {
         Class.forName("org.sqlite.JDBC").newInstance();
         this.plugin = plugin;
         this.connection = DriverManager.getConnection("jdbc:sqlite://" + plugin.getDataFolder().getAbsolutePath() + "/data.db");
-        this.cache = CacheBuilder.newBuilder().expireAfterAccess(plugin.getConfig().getInt("mem-cache-expire", 10), TimeUnit.MINUTES).build();
+        this.cache = CacheBuilder.newBuilder().expireAfterAccess(plugin.getConfig().getInt("cache.memory", 10), TimeUnit.MINUTES).build();
         createTables();
         new QueueTask().start();
         ProxyServer.getInstance().getScheduler().schedule(plugin, new CacheCleanerTask(), 0, 1, TimeUnit.HOURS);
@@ -85,7 +85,7 @@ public class IPChecker implements AutoCloseable {
     }
 
     private void setCooldown() {
-        this.cooldownTime = System.currentTimeMillis() + plugin.getConfig().getLong("timeout");
+        this.cooldownTime = System.currentTimeMillis() + plugin.getConfig().getLong("cooldown");
     }
 
     @SneakyThrows
@@ -101,7 +101,7 @@ public class IPChecker implements AutoCloseable {
         synchronized (connection) {
             try (PreparedStatement ps = connection.prepareStatement("SELECT `result` FROM `check_cache` WHERE `ip` = ? AND `since` > ?")) {
                 ps.setString(1, ip);
-                ps.setLong(2, System.currentTimeMillis() - plugin.getConfig().getLong("cache-lifetime"));
+                ps.setLong(2, System.currentTimeMillis() - plugin.getConfig().getLong("cache.database"));
                 ResultSet rs = ps.executeQuery();
                 if (!rs.next()) return null;
 
@@ -276,7 +276,7 @@ public class IPChecker implements AutoCloseable {
         public void run() {
             synchronized (connection) {
                 try (PreparedStatement ps = connection.prepareStatement("DELETE FROM `check_cache` WHERE `since` <= ?")) {
-                    ps.setLong(1, System.currentTimeMillis() - plugin.getConfig().getLong("cache-lifetime"));
+                    ps.setLong(1, System.currentTimeMillis() - plugin.getConfig().getLong("cache.database"));
                     int deleted = ps.executeUpdate();
                     if (deleted != 0) {
                         plugin.getLogger().info("Deleted " + deleted + " expired cache entries");

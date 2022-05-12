@@ -49,7 +49,7 @@ public class PreLoginListener implements Listener {
 
             boolean isDenied = result.isProxy();
 
-            if (!isDenied && plugin.getConfig().getBoolean("deny-hostings") && result.isHosting()) {
+            if (!isDenied && plugin.getConfig().getBoolean("deny-hosting") && result.isHosting()) {
                 isDenied = true;
             }
 
@@ -68,8 +68,8 @@ public class PreLoginListener implements Listener {
                 notifyStaff(playerName, playerIp, result);
             }
         } catch (Exception e) {
-            if (plugin.getConfig().getBoolean("force-check")) {
-                event.setCancelReason(TextComponent.fromLegacyText(plugin.getConfig().getString("force-kick-reason")));
+            if (plugin.getConfig().getBoolean("force-check.enabled")) {
+                event.setCancelReason(TextComponent.fromLegacyText(plugin.getConfig().getString("force-check.kick-reason")));
                 event.setCancelled(true);
             }
         } finally {
