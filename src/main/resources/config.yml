@@ -1,4 +1,5 @@
 cache-lifetime: 604800000 # 7 Days
+mem-cache-expire: 10 # 10 Minutes
 kick-reason: "ACCESS DENIED"
 deny-hostings: false
 force-check: false
