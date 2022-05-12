@@ -34,6 +34,10 @@ public class CommandExecutor extends Command {
                 handleCheckCommand(sender, Arrays.copyOfRange(args, 1, args.length));
                 break;
             }
+            case "expire": {
+                handleExpireCommand(sender, Arrays.copyOfRange(args, 1, args.length));
+                break;
+            }
             default: {
                 sendHelp(sender);
             }
@@ -120,7 +124,30 @@ public class CommandExecutor extends Command {
         }).start();
     }
 
+    private void handleExpireCommand(CommandSender sender, String[] args) {
+        if (args.length == 0 || args[0].isEmpty()) {
+            sender.sendMessage(TextComponent.fromLegacyText("§cUsage: /antivpn expire <ip>"));
+            return;
+        }
+
+        String ip = args[0];
+
+        new Thread(() -> {
+            try {
+                boolean isDeleted = plugin.getIpChecker().removeFromDatabaseCache(ip);
+
+                if (isDeleted) {
+                    sender.sendMessage(TextComponent.fromLegacyText("§aSuccessfully expired."));
+                } else {
+                    sender.sendMessage(TextComponent.fromLegacyText("§cNothing to expire."));
+                }
+            } catch (Exception e) {
+                sender.sendMessage(TextComponent.fromLegacyText("§cError: " + e.getMessage()));
+            }
+        }).start();
+    }
+
     private void sendHelp(CommandSender sender) {
-        sender.sendMessage(TextComponent.fromLegacyText("§cUsage: /antivpn <block|bypass|check>"));
+        sender.sendMessage(TextComponent.fromLegacyText("§cUsage: /antivpn <block|bypass|check|expire>"));
     }
 }

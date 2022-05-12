@@ -197,6 +197,21 @@ public class IPChecker implements AutoCloseable {
         }
     }
 
+    @SneakyThrows
+    public boolean removeFromDatabaseCache(@NotNull String ip) {
+        synchronized (connection) {
+            try (PreparedStatement ps = connection.prepareStatement("DELETE FROM `check_cache` WHERE `ip` = ?")) {
+                ps.setString(1, ip);
+                boolean isDeleted = ps.executeUpdate() != 0;
+                if (isDeleted) {
+                    cache.invalidate(ip);
+                    return true;
+                }
+                return false;
+            }
+        }
+    }
+
     @Data
     private static class QueueEntry {
         private final String ip;
