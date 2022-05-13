@@ -34,6 +34,10 @@ public class CommandExecutor extends Command {
                 handleCheckCommand(sender, Arrays.copyOfRange(args, 1, args.length));
                 break;
             }
+            case "recheck": {
+                handleRecheckCommand(sender, Arrays.copyOfRange(args, 1, args.length));
+                break;
+            }
             case "expire": {
                 handleExpireCommand(sender, Arrays.copyOfRange(args, 1, args.length));
                 break;
@@ -124,6 +128,25 @@ public class CommandExecutor extends Command {
         }).start();
     }
 
+    private void handleRecheckCommand(CommandSender sender, String[] args) {
+        if (args.length == 0 || args[0].isEmpty()) {
+            sender.sendMessage(TextComponent.fromLegacyText("§cUsage: /antivpn recheck <ip>"));
+            return;
+        }
+
+        String ip = args[0];
+
+        new Thread(() -> {
+            try {
+                plugin.getIpChecker().removeFromDatabaseCache(ip);
+            } catch (Exception e) {
+                sender.sendMessage(TextComponent.fromLegacyText("§cError: " + e.getMessage()));
+            }
+
+            handleCheckCommand(sender, args);
+        }).start();
+    }
+
     private void handleExpireCommand(CommandSender sender, String[] args) {
         if (args.length == 0 || args[0].isEmpty()) {
             sender.sendMessage(TextComponent.fromLegacyText("§cUsage: /antivpn expire <ip>"));
@@ -148,6 +171,6 @@ public class CommandExecutor extends Command {
     }
 
     private void sendHelp(CommandSender sender) {
-        sender.sendMessage(TextComponent.fromLegacyText("§cUsage: /antivpn <block|bypass|check|expire>"));
+        sender.sendMessage(TextComponent.fromLegacyText("§cUsage: /antivpn <block|bypass|check|recheck|expire>"));
     }
 }
