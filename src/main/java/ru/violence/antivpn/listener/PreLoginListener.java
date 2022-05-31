@@ -17,6 +17,7 @@ import ru.violence.antivpn.checker.FieldType;
 import ru.violence.antivpn.checker.IPChecker;
 
 import java.net.InetSocketAddress;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 public class PreLoginListener implements Listener {
@@ -66,6 +67,18 @@ public class PreLoginListener implements Listener {
                 event.setCancelled(true);
                 ProxyServer.getInstance().getConsole().sendMessage(TextComponent.fromLegacyText("§c[AntiVPN] " + playerName + " detected as a proxy: " + playerIp));
                 notifyStaff(playerName, playerIp, result);
+            }
+
+            if (plugin.getConfig().getBoolean("country-blocker.enabled")) {
+                List<String> countries = plugin.getConfig().getStringList("country-blocker.countries");
+                boolean contains = countries.contains(result.getCountryCode());
+                boolean isBlockedCountry = plugin.getConfig().getBoolean("country-blocker.whitelist") != contains;
+
+                if (isBlockedCountry) {
+                    event.setCancelReason(TextComponent.fromLegacyText(plugin.getConfig().getString("country-blocker.kick-reason")));
+                    event.setCancelled(true);
+                    ProxyServer.getInstance().getConsole().sendMessage(TextComponent.fromLegacyText("§c[AntiVPN] " + playerName + " connected from the blocked country: " + result.getCountryCode()));
+                }
             }
         } catch (Exception e) {
             if (plugin.getConfig().getBoolean("force-check.enabled")) {

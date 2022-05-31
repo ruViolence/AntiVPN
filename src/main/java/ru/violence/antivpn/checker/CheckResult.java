@@ -18,6 +18,10 @@ public class CheckResult {
         return json.get("status").getAsString();
     }
 
+    public @NotNull String getCountryCode() {
+        return json.get("countryCode").getAsString();
+    }
+
     public @NotNull String getIsp() {
         return json.get("isp").getAsString();
     }

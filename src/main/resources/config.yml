@@ -24,3 +24,13 @@ force-check:
 
 # Cooldown in milliseconds, for which we will wait when the limit of free checks is reached.
 cooldown: 15000 # 15 Seconds
+
+country-blocker:
+  enabled: false
+  # The kick reason that the player who has connected from a blocked country will see.
+  kick-reason: "Your country is disallowed here"
+  # If true, the countries list will work as a whitelist, otherwise as a blacklist
+  whitelist: false
+  # Countries list (https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2)
+  countries:
+    - 'UG'
