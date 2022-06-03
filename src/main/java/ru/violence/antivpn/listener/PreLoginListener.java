@@ -67,6 +67,7 @@ public class PreLoginListener implements Listener {
                 event.setCancelled(true);
                 ProxyServer.getInstance().getConsole().sendMessage(TextComponent.fromLegacyText("§c[AntiVPN] " + playerName + " detected as a proxy: " + playerIp));
                 notifyStaff(playerName, playerIp, result);
+                return;
             }
 
             if (plugin.getConfig().getBoolean("country-blocker.enabled")) {
