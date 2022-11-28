@@ -5,8 +5,9 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>ru.violence</groupId>
-    <artifactId>AntiVPN</artifactId>
+    <artifactId>antivpn-parent</artifactId>
     <version>0.6.1</version>
+    <packaging>pom</packaging>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -15,42 +16,13 @@
         <maven.compiler.target>8</maven.compiler.target>
     </properties>
 
-    <repositories>
-        <repository>
-            <id>bungeecord-repo</id>
-            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-        </repository>
-    </repositories>
-
-    <dependencies>
-        <dependency>
-            <groupId>net.md-5</groupId>
-            <artifactId>bungeecord-api</artifactId>
-            <version>1.16-R0.4</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.xerial</groupId>
-            <artifactId>sqlite-jdbc</artifactId>
-            <version>3.36.0.3</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.jetbrains</groupId>
-            <artifactId>annotations</artifactId>
-            <version>23.0.0</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <version>1.18.22</version>
-            <scope>provided</scope>
-        </dependency>
-    </dependencies>
+    <modules>
+        <module>common</module>
+        <module>bungee</module>
+        <module>velocity</module>
+    </modules>
 
     <build>
-        <finalName>AntiVPN</finalName>
         <resources>
             <resource>
                 <directory>src/main/resources</directory>
@@ -67,52 +39,5 @@
                 </includes>
             </resource>
         </resources>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.8.1</version>
-                <configuration>
-                    <source>${java.version}</source>
-                    <target>${java.version}</target>
-                </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-shade-plugin</artifactId>
-                <version>3.2.3</version>
-                <executions>
-                    <execution>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>shade</goal>
-                        </goals>
-                        <configuration>
-                            <filters>
-                                <filter>
-                                    <artifact>*:*</artifact>
-                                    <excludes>
-                                        <exclude>META-INF/**</exclude>
-                                    </excludes>
-                                </filter>
-                            </filters>
-                        </configuration>
-                    </execution>
-                </executions>
-                <configuration>
-                    <createDependencyReducedPom>false</createDependencyReducedPom>
-                    <filters>
-                        <filter>
-                            <artifact>*:*</artifact>
-                            <excludes>
-                                <exclude>**/*.java</exclude>
-                                <exclude>**/*.SF</exclude>
-                                <exclude>**/*.DSA</exclude>
-                            </excludes>
-                        </filter>
-                    </filters>
-                </configuration>
-            </plugin>
-        </plugins>
     </build>
 </project>

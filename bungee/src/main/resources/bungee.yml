@@ -1,0 +1,4 @@
+name: AntiVPN
+main: ru.violence.antivpn.bungee.AntiVPNPlugin
+version: ${project.version}
+author: ruViolence
