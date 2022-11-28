@@ -34,14 +34,16 @@ public class PreLoginListener implements Listener {
         try {
             event.registerIntent(plugin);
 
+            IPChecker checker = plugin.getIpChecker();
+
             String playerName = event.getConnection().getName();
+            if (checker.isBypassed(FieldType.PLAYER_NAME, playerName)) return;
+
             String playerIp = ((InetSocketAddress) event.getConnection().getSocketAddress()).getAddress().getHostAddress();
 
-            IPChecker checker = plugin.getIpChecker();
             CheckResult result = checker.check(playerIp).get(plugin.getConfig().getLong("result-await"), TimeUnit.MILLISECONDS);
 
-            if (checker.isBypassed(FieldType.PLAYER_NAME, playerName)
-                    || checker.isBypassed(FieldType.ISP, result.getIsp())
+            if (checker.isBypassed(FieldType.ISP, result.getIsp())
                     || checker.isBypassed(FieldType.ORG, result.getOrg())
                     || checker.isBypassed(FieldType.AS, result.getAs())
                     || checker.isBypassed(FieldType.ASNAME, result.getAsname())) {
