@@ -25,7 +25,9 @@ jobs:
       run: mvn -B package --file pom.xml
 
     - name: Upload a Build Artifact
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: AntiVPN
-        path: target/AntiVPN.jar
+        path: |
+          bungee/target/AntiVPN-Bungee.jar
+          velocity/target/AntiVPN-Velocity.jar
