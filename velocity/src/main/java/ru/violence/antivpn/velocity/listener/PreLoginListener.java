@@ -26,9 +26,9 @@ public class PreLoginListener {
 
     @Subscribe
     public void onPreLogin(PreLoginEvent event, Continuation continuation) {
-        if (!event.getResult().isAllowed()) return;
-
         try {
+            if (!event.getResult().isAllowed()) return;
+        
             IPChecker checker = plugin.getIpChecker();
 
             String playerName = event.getUsername();
