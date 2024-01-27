@@ -42,6 +42,10 @@ public class CommandExecutor extends Command {
                 handleExpireCommand(sender, Arrays.copyOfRange(args, 1, args.length));
                 break;
             }
+            case "reload": {
+                handleReloadCommand(sender);
+                break;
+            }
             default: {
                 sendHelp(sender);
             }
@@ -168,6 +172,11 @@ public class CommandExecutor extends Command {
                 sender.sendMessage(TextComponent.fromLegacyText("§cError: " + e.getMessage()));
             }
         }).start();
+    }
+
+    private void handleReloadCommand(CommandSender sender) {
+        plugin.reloadConfig();
+        sender.sendMessage(TextComponent.fromLegacyText("§aConfig reloaded."));
     }
 
     private void sendHelp(CommandSender sender) {

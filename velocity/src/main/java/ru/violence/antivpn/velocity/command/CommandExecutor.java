@@ -45,6 +45,10 @@ public class CommandExecutor implements SimpleCommand {
                 handleExpireCommand(sender, Arrays.copyOfRange(args, 1, args.length));
                 break;
             }
+            case "reload": {
+                handleReloadCommand(sender);
+                break;
+            }
             default: {
                 sendHelp(sender);
             }
@@ -173,12 +177,17 @@ public class CommandExecutor implements SimpleCommand {
         }).start();
     }
 
+    private void handleReloadCommand(CommandSource sender) {
+        plugin.reloadConfig();
+        sender.sendMessage(Component.text("Config reloaded.").color(NamedTextColor.GREEN));
+    }
+
     @Override
     public boolean hasPermission(Invocation invocation) {
         return invocation.source().hasPermission("antivpn.command.use");
     }
 
     private void sendHelp(CommandSource sender) {
-        sender.sendMessage(Component.text("Usage: /antivpn <block|bypass|check|recheck|expire>").color(NamedTextColor.RED));
+        sender.sendMessage(Component.text("Usage: /antivpn <block|bypass|check|recheck|expire|reload>").color(NamedTextColor.RED));
     }
 }

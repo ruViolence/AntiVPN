@@ -27,22 +27,29 @@ import java.util.concurrent.TimeUnit;
 public class IPChecker implements AutoCloseable {
     private static final String API_URL_PREFIX = "http://ip-api.com/json/";
     private static final String API_URL_SUFFIX = "?fields=21122562";
-    private final Cache<String, CheckResult> cache;
     private final Set<QueueEntry> queue = Sets.newConcurrentHashSet();
-    private final long cooldown;
-    private final long dbCacheLifetime;
     final Connection connection;
     private long cooldownTime = 0;
+    // Configurable
+    private Cache<String, CheckResult> cache;
+    private long dbCacheLifetime;
+    private long cooldown;
 
     @SneakyThrows
     public IPChecker(File dataFolder, long memCacheLifetime, long dbCacheLifetime, long cooldown) {
         Class.forName("org.sqlite.JDBC");
-        this.dbCacheLifetime = dbCacheLifetime;
-        this.cooldown = cooldown;
         this.connection = DriverManager.getConnection("jdbc:sqlite://" + dataFolder.getAbsolutePath() + "/data.db");
-        this.cache = CacheBuilder.newBuilder().expireAfterAccess(memCacheLifetime, TimeUnit.MINUTES).build();
+        reload(memCacheLifetime, dbCacheLifetime, cooldown);
         createTables();
         new QueueTask().start();
+    }
+
+    public void reload(long memCacheLifetime, long dbCacheLifetime, long cooldown) {
+        synchronized (connection) {
+            this.cache = CacheBuilder.newBuilder().expireAfterAccess(memCacheLifetime, TimeUnit.MINUTES).build();
+            this.dbCacheLifetime = dbCacheLifetime;
+            this.cooldown = cooldown;
+        }
     }
 
     @SneakyThrows

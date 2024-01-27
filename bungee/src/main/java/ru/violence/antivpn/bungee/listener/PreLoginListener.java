@@ -17,7 +17,6 @@ import ru.violence.antivpn.common.checker.FieldType;
 import ru.violence.antivpn.common.checker.IPChecker;
 
 import java.net.InetSocketAddress;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 public class PreLoginListener implements Listener {
@@ -41,51 +40,50 @@ public class PreLoginListener implements Listener {
 
             String playerIp = ((InetSocketAddress) event.getConnection().getSocketAddress()).getAddress().getHostAddress();
 
-            CheckResult result = checker.check(playerIp).get(plugin.getConfig().getLong("result-await"), TimeUnit.MILLISECONDS);
+            CheckResult result = checker.check(playerIp).get(plugin.getResultAwait(), TimeUnit.MILLISECONDS);
 
             if (checker.isBypassed(FieldType.ISP, result.getIsp())
-                    || checker.isBypassed(FieldType.ORG, result.getOrg())
-                    || checker.isBypassed(FieldType.AS, result.getAs())
-                    || checker.isBypassed(FieldType.ASNAME, result.getAsname())) {
+                || checker.isBypassed(FieldType.ORG, result.getOrg())
+                || checker.isBypassed(FieldType.AS, result.getAs())
+                || checker.isBypassed(FieldType.ASNAME, result.getAsname())) {
                 return;
             }
 
             boolean isDenied = result.isProxy();
 
-            if (!isDenied && plugin.getConfig().getBoolean("deny-hosting") && result.isHosting()) {
+            if (!isDenied && plugin.isDenyHosting() && result.isHosting()) {
                 isDenied = true;
             }
 
             if (checker.isBlocked(FieldType.PLAYER_NAME, playerName)
-                    || checker.isBlocked(FieldType.ISP, result.getIsp())
-                    || checker.isBlocked(FieldType.ORG, result.getOrg())
-                    || checker.isBlocked(FieldType.AS, result.getAs())
-                    || checker.isBlocked(FieldType.ASNAME, result.getAsname())) {
+                || checker.isBlocked(FieldType.ISP, result.getIsp())
+                || checker.isBlocked(FieldType.ORG, result.getOrg())
+                || checker.isBlocked(FieldType.AS, result.getAs())
+                || checker.isBlocked(FieldType.ASNAME, result.getAsname())) {
                 isDenied = true;
             }
 
             if (isDenied) {
-                event.setCancelReason(TextComponent.fromLegacyText(plugin.getConfig().getString("kick-reason")));
+                event.setCancelReason(TextComponent.fromLegacyText(plugin.getKickReason()));
                 event.setCancelled(true);
                 ProxyServer.getInstance().getConsole().sendMessage(TextComponent.fromLegacyText("§c[AntiVPN] " + playerName + " detected as a proxy: " + playerIp));
                 notifyStaff(playerName, playerIp, result);
                 return;
             }
 
-            if (plugin.getConfig().getBoolean("country-blocker.enabled")) {
-                List<String> countries = plugin.getConfig().getStringList("country-blocker.countries");
-                boolean contains = countries.contains(result.getCountryCode());
-                boolean isBlockedCountry = plugin.getConfig().getBoolean("country-blocker.whitelist") != contains;
+            if (plugin.isCountryBlockerEnabled()) {
+                boolean contains = plugin.getCountryBlockerCountries().contains(result.getCountryCode());
+                boolean isBlockedCountry = plugin.isCountryBlockerWhitelist() != contains;
 
                 if (isBlockedCountry) {
-                    event.setCancelReason(TextComponent.fromLegacyText(plugin.getConfig().getString("country-blocker.kick-reason")));
+                    event.setCancelReason(TextComponent.fromLegacyText(plugin.getCountryBlockerKickReason()));
                     event.setCancelled(true);
                     ProxyServer.getInstance().getConsole().sendMessage(TextComponent.fromLegacyText("§c[AntiVPN] " + playerName + " connected from the blocked country: " + result.getCountryCode()));
                 }
             }
         } catch (Exception e) {
-            if (plugin.getConfig().getBoolean("force-check.enabled")) {
-                event.setCancelReason(TextComponent.fromLegacyText(plugin.getConfig().getString("force-check.kick-reason")));
+            if (plugin.isForceCheckEnabled()) {
+                event.setCancelReason(TextComponent.fromLegacyText(plugin.getForceCheckKickReason()));
                 event.setCancelled(true);
             }
         } finally {

@@ -15,20 +15,32 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 public class AntiVPNPlugin extends Plugin {
-    private @Getter Configuration config;
     private @Getter IPChecker ipChecker;
+
+    // Config values
+    private @Getter String kickReason;
+    private @Getter long cacheDbLifetime;
+    private @Getter long cacheMemoryLifetime;
+    private @Getter boolean denyHosting;
+    private @Getter long resultAwait;
+    private @Getter boolean forceCheckEnabled;
+    private @Getter String forceCheckKickReason;
+    private @Getter long cooldown;
+    private @Getter boolean countryBlockerEnabled;
+    private @Getter String countryBlockerKickReason;
+    private @Getter boolean countryBlockerWhitelist;
+    private @Getter List<String> countryBlockerCountries;
 
     @Override
     public void onEnable() {
         extractDefaultConfig();
         reloadConfig();
-        long memCacheLifetime = getConfig().getLong("cache.memory");
-        long dbCacheLifetime = getConfig().getLong("cache.database");
-        ipChecker = new IPChecker(getDataFolder(), memCacheLifetime, dbCacheLifetime, getConfig().getLong("cooldown"));
-        ProxyServer.getInstance().getScheduler().schedule(this, new CacheCleanerRunnable(ipChecker, dbCacheLifetime, getLogger()), 0, 1, TimeUnit.HOURS);
+        ipChecker = new IPChecker(getDataFolder(), cacheMemoryLifetime, cacheDbLifetime, cooldown);
+        ProxyServer.getInstance().getScheduler().schedule(this, new CacheCleanerRunnable(ipChecker, getLogger(), this::getCacheDbLifetime), 0, 1, TimeUnit.HOURS);
         getProxy().getPluginManager().registerCommand(this, new CommandExecutor(this));
         getProxy().getPluginManager().registerListener(this, new PreLoginListener(this));
     }
@@ -51,8 +63,23 @@ public class AntiVPNPlugin extends Plugin {
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
     @SneakyThrows(IOException.class)
-    private void reloadConfig() {
+    public void reloadConfig() {
         getDataFolder().mkdirs();
-        config = YamlConfiguration.getProvider(YamlConfiguration.class).load(new File(getDataFolder(), "config.yml"));
+        Configuration config = YamlConfiguration.getProvider(YamlConfiguration.class).load(new File(getDataFolder(), "config.yml"));
+
+        kickReason = config.getString("kick-reason");
+        cacheMemoryLifetime = config.getLong("cache.memory");
+        cacheDbLifetime = config.getLong("cache.database");
+        denyHosting = config.getBoolean("deny-hosting");
+        resultAwait = config.getLong("result-await");
+        forceCheckEnabled = config.getBoolean("force-check.enabled");
+        forceCheckKickReason = config.getString("force-check.kick-reason");
+        cooldown = config.getLong("cooldown");
+        countryBlockerEnabled = config.getBoolean("country-blocker.enabled");
+        countryBlockerKickReason = config.getString("country-blocker.kick-reason");
+        countryBlockerWhitelist = config.getBoolean("country-blocker.whitelist");
+        countryBlockerCountries = config.getStringList("country-blocker.countries");
+
+        if (ipChecker != null) ipChecker.reload(cacheMemoryLifetime, cacheDbLifetime, cooldown);
     }
 }
