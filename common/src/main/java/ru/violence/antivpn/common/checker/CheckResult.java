@@ -2,13 +2,12 @@ package ru.violence.antivpn.common.checker;
 
 import com.google.gson.JsonObject;
 import lombok.Data;
-import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 import ru.violence.antivpn.common.util.Utils;
 
 @Data
 public class CheckResult {
-    private final @Getter JsonObject json;
+    private final JsonObject json;
 
     public CheckResult(String json) {
         this.json = Utils.parseJson(json);
