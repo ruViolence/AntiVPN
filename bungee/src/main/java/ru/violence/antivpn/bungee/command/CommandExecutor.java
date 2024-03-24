@@ -4,8 +4,8 @@ import net.md_5.bungee.api.CommandSender;
 import net.md_5.bungee.api.chat.TextComponent;
 import net.md_5.bungee.api.plugin.Command;
 import ru.violence.antivpn.bungee.AntiVPNPlugin;
-import ru.violence.antivpn.common.checker.CheckResult;
-import ru.violence.antivpn.common.checker.FieldType;
+import ru.violence.antivpn.common.model.CheckResult;
+import ru.violence.antivpn.common.model.FieldType;
 import ru.violence.antivpn.common.util.Utils;
 
 import java.util.Arrays;
@@ -66,7 +66,7 @@ public class CommandExecutor extends Command {
             return;
         }
 
-        boolean isEnabled = plugin.getIpChecker().toggleBlock(type, value);
+        boolean isEnabled = plugin.getDatabase().toggleBlock(type, value);
 
         if (isEnabled) {
             sender.sendMessage(TextComponent.fromLegacyText("§aBlock for \"" + type + "\" \"" + value + "\" has been enabled."));
@@ -89,7 +89,7 @@ public class CommandExecutor extends Command {
             return;
         }
 
-        boolean isEnabled = plugin.getIpChecker().toggleBypass(type, value);
+        boolean isEnabled = plugin.getDatabase().toggleBypass(type, value);
 
         if (isEnabled) {
             sender.sendMessage(TextComponent.fromLegacyText("§aBypass for \"" + type + "\" \"" + value + "\" has been enabled."));
@@ -108,23 +108,27 @@ public class CommandExecutor extends Command {
 
         new Thread(() -> {
             try {
-                CheckResult result = plugin.getIpChecker().check(ip).get();
+                CheckResult result = plugin.getIpApi().check(ip).get();
                 sender.sendMessage(TextComponent.fromLegacyText("§aResult: " + result.getJson().toString()));
 
                 String s;
 
                 s = "§aBlocks: ";
-                s += FieldType.ISP.toKey() + "=" + plugin.getIpChecker().isBlocked(FieldType.ISP, result.getIsp()) + ", ";
-                s += FieldType.ORG.toKey() + "=" + plugin.getIpChecker().isBlocked(FieldType.ORG, result.getOrg()) + ", ";
-                s += FieldType.AS.toKey() + "=" + plugin.getIpChecker().isBlocked(FieldType.AS, result.getAs()) + ", ";
-                s += FieldType.ASNAME.toKey() + "=" + plugin.getIpChecker().isBlocked(FieldType.ASNAME, result.getAsname());
+                s += FieldType.ISP.toKey() + "=" + plugin.getDatabase().isBlocked(FieldType.ISP, result.getIsp()) + ", ";
+                s += FieldType.ORG.toKey() + "=" + plugin.getDatabase().isBlocked(FieldType.ORG, result.getOrg()) + ", ";
+                s += FieldType.AS.toKey() + "=" + plugin.getDatabase().isBlocked(FieldType.AS, result.getAs()) + ", ";
+                s += FieldType.ASNAME.toKey() + "=" + plugin.getDatabase().isBlocked(FieldType.ASNAME, result.getAsname());
                 sender.sendMessage(TextComponent.fromLegacyText(s));
 
                 s = "§aBypasses: ";
-                s += FieldType.ISP.toKey() + "=" + plugin.getIpChecker().isBypassed(FieldType.ISP, result.getIsp()) + ", ";
-                s += FieldType.ORG.toKey() + "=" + plugin.getIpChecker().isBypassed(FieldType.ORG, result.getOrg()) + ", ";
-                s += FieldType.AS.toKey() + "=" + plugin.getIpChecker().isBypassed(FieldType.AS, result.getAs()) + ", ";
-                s += FieldType.ASNAME.toKey() + "=" + plugin.getIpChecker().isBypassed(FieldType.ASNAME, result.getAsname());
+                s += FieldType.ISP.toKey() + "=" + plugin.getDatabase().isBypassed(FieldType.ISP, result.getIsp()) + ", ";
+                s += FieldType.ORG.toKey() + "=" + plugin.getDatabase().isBypassed(FieldType.ORG, result.getOrg()) + ", ";
+                s += FieldType.AS.toKey() + "=" + plugin.getDatabase().isBypassed(FieldType.AS, result.getAs()) + ", ";
+                s += FieldType.ASNAME.toKey() + "=" + plugin.getDatabase().isBypassed(FieldType.ASNAME, result.getAsname());
+                sender.sendMessage(TextComponent.fromLegacyText(s));
+
+                s = "§aProxy List: ";
+                s += (plugin.getProxyList().check(ip) ? "True" : "False");
                 sender.sendMessage(TextComponent.fromLegacyText(s));
             } catch (Exception e) {
                 sender.sendMessage(TextComponent.fromLegacyText("§cError: " + e.getMessage()));
@@ -142,7 +146,7 @@ public class CommandExecutor extends Command {
 
         new Thread(() -> {
             try {
-                plugin.getIpChecker().removeFromDatabaseCache(ip);
+                plugin.getIpApi().removeCachedResult(ip);
             } catch (Exception e) {
                 sender.sendMessage(TextComponent.fromLegacyText("§cError: " + e.getMessage()));
             }
@@ -161,7 +165,7 @@ public class CommandExecutor extends Command {
 
         new Thread(() -> {
             try {
-                boolean isDeleted = plugin.getIpChecker().removeFromDatabaseCache(ip);
+                boolean isDeleted = plugin.getIpApi().removeCachedResult(ip);
 
                 if (isDeleted) {
                     sender.sendMessage(TextComponent.fromLegacyText("§aSuccessfully expired."));

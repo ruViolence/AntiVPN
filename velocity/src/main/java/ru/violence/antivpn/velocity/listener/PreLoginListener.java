@@ -7,13 +7,19 @@ import com.velocitypowered.api.proxy.Player;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.minimessage.MiniMessage;
-import ru.violence.antivpn.common.checker.CheckResult;
-import ru.violence.antivpn.common.checker.FieldType;
-import ru.violence.antivpn.common.checker.IPChecker;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import ru.violence.antivpn.common.config.Config;
+import ru.violence.antivpn.common.model.CheckResult;
+import ru.violence.antivpn.common.model.exception.BypassedException;
+import ru.violence.antivpn.common.model.exception.CheckErrorException;
+import ru.violence.antivpn.common.model.exception.CountryBlockedException;
+import ru.violence.antivpn.common.model.exception.HostingBlockedException;
+import ru.violence.antivpn.common.model.exception.ManuallyBlockedException;
+import ru.violence.antivpn.common.model.exception.ProxyBlockedException;
 import ru.violence.antivpn.velocity.AntiVPNPlugin;
 
-import java.util.concurrent.TimeUnit;
+import static net.kyori.adventure.text.minimessage.MiniMessage.miniMessage;
 
 public class PreLoginListener {
     private final AntiVPNPlugin plugin;
@@ -26,76 +32,46 @@ public class PreLoginListener {
     public void onPreLogin(PreLoginEvent event, Continuation continuation) {
         try {
             if (!event.getResult().isAllowed()) return;
-        
-            IPChecker checker = plugin.getIpChecker();
 
             String playerName = event.getUsername();
-            if (checker.isBypassed(FieldType.PLAYER_NAME, playerName)) return;
-
             String playerIp = event.getConnection().getRemoteAddress().getAddress().getHostAddress();
 
-            CheckResult result = checker.check(playerIp).get(plugin.getResultAwait(), TimeUnit.MILLISECONDS);
-
-            if (checker.isBypassed(FieldType.ISP, result.getIsp())
-                || checker.isBypassed(FieldType.ORG, result.getOrg())
-                || checker.isBypassed(FieldType.AS, result.getAs())
-                || checker.isBypassed(FieldType.ASNAME, result.getAsname())) {
-                return;
+            try {
+                plugin.getIpChecker().checkPlayer(playerName, playerIp);
+            } catch (BypassedException e) {
+                // NOOP
+            } catch (CountryBlockedException e) {
+                event.setResult(PreLoginEvent.PreLoginComponentResult.denied(miniMessage().deserialize(Config.IpApi.COUNTRY_BLOCKER_KICK_REASON)));
+                notifyStaff(playerIp, "[AntiVPN] " + playerName + " connecting from the blocked country: " + e.getCheckResult().getCountryCode(), e.getCheckResult());
+            } catch (ProxyBlockedException e) {
+                event.setResult(PreLoginEvent.PreLoginComponentResult.denied(miniMessage().deserialize(Config.KICK_REASON)));
+                notifyStaff(playerIp, "[AntiVPN] " + playerName + " detected as a proxy: " + playerIp + " " + (e == ProxyBlockedException.PROXY_LIST ? "(ProxyList)" : "(IPAPI)"), e.getCheckResult());
+            } catch (HostingBlockedException e) {
+                event.setResult(PreLoginEvent.PreLoginComponentResult.denied(miniMessage().deserialize(Config.KICK_REASON)));
+                notifyStaff(playerIp, "[AntiVPN] " + playerName + " detected as a VPN: " + playerIp, e.getCheckResult());
+            } catch (ManuallyBlockedException e) {
+                event.setResult(PreLoginEvent.PreLoginComponentResult.denied(miniMessage().deserialize(Config.KICK_REASON)));
+                notifyStaff(playerIp, "[AntiVPN] " + playerName + " is manually blocked: " + playerIp, e.getCheckResult());
             }
-
-            boolean isDenied = result.isProxy();
-
-            if (!isDenied && plugin.isDenyHosting() && result.isHosting()) {
-                isDenied = true;
-            }
-
-            if (checker.isBlocked(FieldType.PLAYER_NAME, playerName)
-                || checker.isBlocked(FieldType.ISP, result.getIsp())
-                || checker.isBlocked(FieldType.ORG, result.getOrg())
-                || checker.isBlocked(FieldType.AS, result.getAs())
-                || checker.isBlocked(FieldType.ASNAME, result.getAsname())) {
-                isDenied = true;
-            }
-
-            if (isDenied) {
-                event.setResult(PreLoginEvent.PreLoginComponentResult.denied(MiniMessage.miniMessage().deserialize(plugin.getKickReason())));
-                plugin.getProxy().getConsoleCommandSource().sendMessage(Component.text("[AntiVPN] " + playerName + " detected as a proxy: " + playerIp).color(NamedTextColor.RED));
-                notifyStaff(playerName, playerIp, result);
-                return;
-            }
-
-            if (plugin.isCountryBlockerEnabled()) {
-                boolean contains = plugin.getCountryBlockerCountries().contains(result.getCountryCode());
-                boolean isBlockedCountry = plugin.isCountryBlockerWhitelist() != contains;
-
-                if (isBlockedCountry) {
-                    event.setResult(PreLoginEvent.PreLoginComponentResult.denied(MiniMessage.miniMessage().deserialize(plugin.getCountryBlockerKickReason())));
-                    plugin.getProxy().getConsoleCommandSource().sendMessage(Component.text("[AntiVPN] " + playerName + " connected from the blocked country: " + result.getCountryCode()).color(NamedTextColor.RED));
-                }
-            }
-        } catch (Exception e) {
-            if (plugin.isForceCheckEnabled()) {
-                event.setResult(PreLoginEvent.PreLoginComponentResult.denied(MiniMessage.miniMessage().deserialize(plugin.getForceCheckKickReason())));
+        } catch (CheckErrorException e) {
+            if (Config.IpApi.FORCE_CHECK_ENABLED) {
+                event.setResult(PreLoginEvent.PreLoginComponentResult.denied(miniMessage().deserialize(Config.IpApi.FORCE_CHECK_KICK_REASON)));
             }
         } finally {
             continuation.resume();
         }
     }
 
-    private void notifyStaff(String playerName, String playerIp, CheckResult result) {
-        Component text = null;
+    private void notifyStaff(@NotNull String playerIp, @NotNull String text, @Nullable CheckResult result) {
+        Component message = Component.text(text)
+                .color(NamedTextColor.RED)
+                .hoverEvent(result == null ? null : Component.text(result.getJson().toString()))
+                .clickEvent(ClickEvent.suggestCommand(playerIp));
 
+        plugin.getProxy().getConsoleCommandSource().sendMessage(message);
         for (Player player : plugin.getProxy().getAllPlayers()) {
             if (!player.hasPermission("antivpn.kick.notify")) continue;
-
-            if (text == null) {
-                text = Component.text("[AntiVPN] " + playerName + " tried to join the server, but is disallowed.")
-                        .color(NamedTextColor.RED)
-                        .hoverEvent(Component.text(result.getJson().toString()))
-                        .clickEvent(ClickEvent.suggestCommand(playerIp));
-            }
-
-            player.sendMessage(text);
+            player.sendMessage(message);
         }
     }
 }

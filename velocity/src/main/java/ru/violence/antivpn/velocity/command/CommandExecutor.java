@@ -4,8 +4,8 @@ import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.command.SimpleCommand;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import ru.violence.antivpn.common.checker.CheckResult;
-import ru.violence.antivpn.common.checker.FieldType;
+import ru.violence.antivpn.common.model.CheckResult;
+import ru.violence.antivpn.common.model.FieldType;
 import ru.violence.antivpn.common.util.Utils;
 import ru.violence.antivpn.velocity.AntiVPNPlugin;
 
@@ -69,7 +69,7 @@ public class CommandExecutor implements SimpleCommand {
             return;
         }
 
-        boolean isEnabled = plugin.getIpChecker().toggleBlock(type, value);
+        boolean isEnabled = plugin.getDatabase().toggleBlock(type, value);
 
         if (isEnabled) {
             sender.sendMessage(Component.text("Block for \"" + type + "\" \"" + value + "\" has been enabled.").color(NamedTextColor.GREEN));
@@ -92,7 +92,7 @@ public class CommandExecutor implements SimpleCommand {
             return;
         }
 
-        boolean isEnabled = plugin.getIpChecker().toggleBypass(type, value);
+        boolean isEnabled = plugin.getDatabase().toggleBypass(type, value);
 
         if (isEnabled) {
             sender.sendMessage(Component.text("Bypass for \"" + type + "\" \"" + value + "\" has been enabled.").color(NamedTextColor.GREEN));
@@ -111,23 +111,27 @@ public class CommandExecutor implements SimpleCommand {
 
         new Thread(() -> {
             try {
-                CheckResult result = plugin.getIpChecker().check(ip).get();
+                CheckResult result = plugin.getIpApi().check(ip).get();
                 sender.sendMessage(Component.text("Result: " + result.getJson().toString()).color(NamedTextColor.GREEN));
 
                 String s;
 
                 s = "Blocks: ";
-                s += FieldType.ISP.toKey() + "=" + plugin.getIpChecker().isBlocked(FieldType.ISP, result.getIsp()) + ", ";
-                s += FieldType.ORG.toKey() + "=" + plugin.getIpChecker().isBlocked(FieldType.ORG, result.getOrg()) + ", ";
-                s += FieldType.AS.toKey() + "=" + plugin.getIpChecker().isBlocked(FieldType.AS, result.getAs()) + ", ";
-                s += FieldType.ASNAME.toKey() + "=" + plugin.getIpChecker().isBlocked(FieldType.ASNAME, result.getAsname());
+                s += FieldType.ISP.toKey() + "=" + plugin.getDatabase().isBlocked(FieldType.ISP, result.getIsp()) + ", ";
+                s += FieldType.ORG.toKey() + "=" + plugin.getDatabase().isBlocked(FieldType.ORG, result.getOrg()) + ", ";
+                s += FieldType.AS.toKey() + "=" + plugin.getDatabase().isBlocked(FieldType.AS, result.getAs()) + ", ";
+                s += FieldType.ASNAME.toKey() + "=" + plugin.getDatabase().isBlocked(FieldType.ASNAME, result.getAsname());
                 sender.sendMessage(Component.text(s).color(NamedTextColor.GREEN));
 
                 s = "Bypasses: ";
-                s += FieldType.ISP.toKey() + "=" + plugin.getIpChecker().isBypassed(FieldType.ISP, result.getIsp()) + ", ";
-                s += FieldType.ORG.toKey() + "=" + plugin.getIpChecker().isBypassed(FieldType.ORG, result.getOrg()) + ", ";
-                s += FieldType.AS.toKey() + "=" + plugin.getIpChecker().isBypassed(FieldType.AS, result.getAs()) + ", ";
-                s += FieldType.ASNAME.toKey() + "=" + plugin.getIpChecker().isBypassed(FieldType.ASNAME, result.getAsname());
+                s += FieldType.ISP.toKey() + "=" + plugin.getDatabase().isBypassed(FieldType.ISP, result.getIsp()) + ", ";
+                s += FieldType.ORG.toKey() + "=" + plugin.getDatabase().isBypassed(FieldType.ORG, result.getOrg()) + ", ";
+                s += FieldType.AS.toKey() + "=" + plugin.getDatabase().isBypassed(FieldType.AS, result.getAs()) + ", ";
+                s += FieldType.ASNAME.toKey() + "=" + plugin.getDatabase().isBypassed(FieldType.ASNAME, result.getAsname());
+                sender.sendMessage(Component.text(s).color(NamedTextColor.GREEN));
+
+                s = "Proxy List: ";
+                s += (plugin.getProxyList().check(ip) ? "True" : "False");
                 sender.sendMessage(Component.text(s).color(NamedTextColor.GREEN));
             } catch (Exception e) {
                 sender.sendMessage(Component.text("Error: " + e.getMessage()).color(NamedTextColor.RED));
@@ -145,7 +149,7 @@ public class CommandExecutor implements SimpleCommand {
 
         new Thread(() -> {
             try {
-                plugin.getIpChecker().removeFromDatabaseCache(ip);
+                plugin.getIpApi().removeCachedResult(ip);
             } catch (Exception e) {
                 sender.sendMessage(Component.text("Error: " + e.getMessage()).color(NamedTextColor.RED));
             }
@@ -164,7 +168,7 @@ public class CommandExecutor implements SimpleCommand {
 
         new Thread(() -> {
             try {
-                boolean isDeleted = plugin.getIpChecker().removeFromDatabaseCache(ip);
+                boolean isDeleted = plugin.getIpApi().removeCachedResult(ip);
 
                 if (isDeleted) {
                     sender.sendMessage(Component.text("Successfully expired.").color(NamedTextColor.GREEN));

@@ -1,4 +1,4 @@
-package ru.violence.antivpn.common.checker;
+package ru.violence.antivpn.common.model;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

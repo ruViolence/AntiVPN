@@ -10,41 +10,36 @@ import com.velocitypowered.api.proxy.ProxyServer;
 import io.leangen.geantyref.TypeToken;
 import lombok.Getter;
 import lombok.SneakyThrows;
+import org.jetbrains.annotations.NotNull;
 import org.spongepowered.configurate.CommentedConfigurationNode;
 import org.spongepowered.configurate.yaml.YamlConfigurationLoader;
-import ru.violence.antivpn.common.checker.CacheCleanerRunnable;
-import ru.violence.antivpn.common.checker.IPChecker;
+import ru.violence.antivpn.common.AntiVPN;
+import ru.violence.antivpn.common.config.Config;
+import ru.violence.antivpn.common.database.SQLite;
+import ru.violence.antivpn.common.model.IPAPI;
+import ru.violence.antivpn.common.model.IPChecker;
+import ru.violence.antivpn.common.model.ProxyList;
 import ru.violence.antivpn.velocity.command.CommandExecutor;
 import ru.violence.antivpn.velocity.listener.PreLoginListener;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
+import java.util.HashSet;
 import java.util.logging.Logger;
 
 @Plugin(id = "antivpn", name = "AntiVPN", version = BuildConstants.VERSION)
-public class AntiVPNPlugin {
+public class AntiVPNPlugin implements AntiVPN {
     private final @Getter ProxyServer proxy;
-    private final @Getter Path dataFolder;
+    private final Path dataFolder;
     private final @Getter Logger logger;
 
+    private @Getter SQLite database;
+    private @Getter ProxyList proxyList;
+    private @Getter IPAPI ipApi;
     private @Getter IPChecker ipChecker;
-    // Config values
-    private @Getter String kickReason;
-    private @Getter long cacheDbLifetime;
-    private @Getter long cacheMemoryLifetime;
-    private @Getter boolean denyHosting;
-    private @Getter long resultAwait;
-    private @Getter boolean forceCheckEnabled;
-    private @Getter String forceCheckKickReason;
-    private @Getter long cooldown;
-    private @Getter boolean countryBlockerEnabled;
-    private @Getter String countryBlockerKickReason;
-    private @Getter boolean countryBlockerWhitelist;
-    private @Getter List<String> countryBlockerCountries;
 
     @Inject
     public AntiVPNPlugin(ProxyServer proxy, @DataDirectory Path dataFolder) {
@@ -57,15 +52,21 @@ public class AntiVPNPlugin {
     public void onProxyInitialization(ProxyInitializeEvent event) {
         extractDefaultConfig();
         reloadConfig();
-        ipChecker = new IPChecker(dataFolder.toFile(), cacheMemoryLifetime, cacheDbLifetime, cooldown);
-        proxy.getScheduler().buildTask(this, new CacheCleanerRunnable(ipChecker, getLogger(), this::getCacheDbLifetime)).repeat(1, TimeUnit.HOURS).schedule();
+
+        database = new SQLite(this);
+        proxyList = new ProxyList(this);
+        ipApi = new IPAPI(this);
+        ipChecker = new IPChecker(this);
+
         proxy.getCommandManager().register("antivpn", new CommandExecutor(this));
         proxy.getEventManager().register(this, new PreLoginListener(this));
     }
 
     @Subscribe
     public void onProxyShutdown(ProxyShutdownEvent event) {
-        ipChecker.close();
+        if (database != null) database.close();
+        if (proxyList != null) proxyList.close();
+        if (ipApi != null) ipApi.close();
     }
 
     @SuppressWarnings("ConstantConditions")
@@ -85,19 +86,44 @@ public class AntiVPNPlugin {
         Files.createDirectories(dataFolder);
         CommentedConfigurationNode config = YamlConfigurationLoader.builder().path(dataFolder.resolve("config.yml")).build().load();
 
-        kickReason = config.node("kick-reason").getString();
-        cacheMemoryLifetime = config.node("cache", "memory").getLong();
-        cacheDbLifetime = config.node("cache", "database").getLong();
-        denyHosting = config.node("deny-hosting").getBoolean();
-        resultAwait = config.node("result-await").getLong();
-        forceCheckEnabled = config.node("force-check", "enabled").getBoolean();
-        forceCheckKickReason = config.node("force-check", "kick-reason").getString();
-        cooldown = config.node("cooldown").getLong();
-        countryBlockerEnabled = config.node("country-blocker", "enabled").getBoolean();
-        countryBlockerKickReason = config.node("country-blocker", "kick-reason").getString();
-        countryBlockerWhitelist = config.node("country-blocker", "whitelist").getBoolean();
-        countryBlockerCountries = config.node("country-blocker", "countries").getList(TypeToken.get(String.class));
+        Config.KICK_REASON = config.node("kick-reason").getString();
 
-        if (ipChecker != null) ipChecker.reload(cacheMemoryLifetime, cacheDbLifetime, cooldown);
+        Config.ProxyList.ENABLED = config.node("proxy-list", "enabled").getBoolean();
+
+        Config.ProxyList.CACHE_DATABASE = config.node("proxy-list", "cache", "database").getLong();
+        Config.ProxyList.CACHE_MEMORY = config.node("proxy-list", "cache", "memory").getLong();
+
+        Config.ProxyList.UPDATE_DELAY = config.node("proxy-list", "update-delay").getLong();
+
+        Config.ProxyList.URLS = config.node("proxy-list", "urls").getList(TypeToken.get(String.class));
+
+        Config.IpApi.ENABLED = config.node("ipapi", "enabled").getBoolean();
+
+        Config.IpApi.CACHE_DATABASE = config.node("ipapi", "cache", "database").getLong();
+        Config.IpApi.CACHE_MEMORY = config.node("ipapi", "cache", "memory").getLong();
+
+        Config.IpApi.DENY_HOSTING = config.node("ipapi", "deny", "hosting").getBoolean();
+        Config.IpApi.DENY_PROXY = config.node("ipapi", "deny", "proxy").getBoolean();
+
+        Config.IpApi.RESULT_AWAIT = config.node("ipapi", "result-await").getLong();
+
+        Config.IpApi.FORCE_CHECK_ENABLED = config.node("ipapi", "force-check", "enabled").getBoolean();
+        Config.IpApi.FORCE_CHECK_KICK_REASON = config.node("ipapi", "force-check", "kick-reason").getString();
+
+        Config.IpApi.COOLDOWN = config.node("ipapi", "cooldown").getLong();
+
+        Config.IpApi.COUNTRY_BLOCKER_ENABLED = config.node("ipapi", "country-blocker", "enabled").getBoolean();
+        Config.IpApi.COUNTRY_BLOCKER_KICK_REASON = config.node("ipapi", "country-blocker", "kick-reason").getString();
+        Config.IpApi.COUNTRY_BLOCKER_WHITELIST = config.node("ipapi", "country-blocker", "whitelist").getBoolean();
+        Config.IpApi.COUNTRY_BLOCKER_COUNTRIES = new HashSet<>(config.node("ipapi", "country-blocker", "countries").getList(TypeToken.get(String.class)));
+
+        if (proxyList != null) proxyList.reload();
+        if (ipApi != null) ipApi.reload();
+        if (ipChecker != null) ipChecker.reload();
+    }
+
+    @Override
+    public @NotNull File getDataFolder() {
+        return dataFolder.toFile();
     }
 }

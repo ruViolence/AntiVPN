@@ -1,36 +1,56 @@
 # The kick reason that the player who has connected via VPN/Proxy will see.
 kick-reason: "ACCESS DENIED"
 
-cache:
-  # How long in milliseconds we will keep data about each IP in the database.
-  database: 604800000 # 7 Days
-  # How long in minutes it takes for the data about each IP to expire from RAM.
-  memory: 10 # 10 Minutes
-
-# Deny hosting IPs or not. It is recommended to leave it enabled.
-deny-hosting: true
-
-# How long to wait in milliseconds when a player connects.
-# It is not recommended to set this value to 50 or higher, as it creates lags for some other players.
-result-await: 5
-
-# If enabled, then the player will be kicked if the "result-await" time runs out while connecting.
-# The check will still run in the background and will be added to the cache.
-# So the player will still be able to log in on the second attempt.
-# It is recommended to leave this enabled if you do not want VPN/Proxy players to sneak into your server.
-force-check:
+proxy-list:
   enabled: true
-  kick-reason: "Please, wait and connect again..."
 
-# Cooldown in milliseconds, for which we will wait when the limit of free checks is reached.
-cooldown: 15000 # 15 Seconds
+  cache:
+    # How long in milliseconds we will keep data about each IP in the database.
+    database: 604800000 # 7 Days
+    # How long in minutes it takes for the data about each IP to expire from RAM.
+    memory: 10 # 10 Minutes
 
-country-blocker:
-  enabled: false
-  # The kick reason that the player who has connected from a blocked country will see.
-  kick-reason: "Your country is disallowed here"
-  # If true, the countries list will work as a whitelist, otherwise as a blacklist
-  whitelist: false
-  # Countries list (https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2)
-  countries:
-    - 'UG'
+  update-delay: 3600000 # 1 Hour
+
+  urls:
+    - 'https://raw.githubusercontent.com/roosterkid/openproxylist/main/SOCKS4_RAW.txt'
+    - 'https://raw.githubusercontent.com/roosterkid/openproxylist/main/SOCKS5_RAW.txt'
+
+ipapi:
+  enabled: true
+
+  cache:
+    # How long in milliseconds we will keep data about each IP in the database.
+    database: 604800000 # 7 Days
+    # How long in minutes it takes for the data about each IP to expire from RAM.
+    memory: 10 # 10 Minutes
+
+  # Prevent hosting or proxy IPs from joining.
+  deny:
+    hosting: true
+    proxy: true
+
+  # How long to wait in milliseconds when a player connects.
+  # It is not recommended to set this value to 50 or higher, as it creates lags for some other players.
+  result-await: 5
+
+  # If enabled, then the player will be kicked if the "result-await" time runs out while connecting.
+  # The check will still run in the background and will be added to the cache.
+  # So the player will still be able to log in on the second attempt.
+  # It is recommended to leave this enabled if you do not want VPN/Proxy players to sneak into your server.
+  force-check:
+    enabled: true
+    kick-reason: "Please, wait and connect again..."
+
+  # Cooldown in milliseconds, for which we will wait when the limit of free checks is reached.
+  cooldown: 15000 # 15 Seconds
+
+  country-blocker:
+    enabled: false
+    # The kick reason that the player who has connected from a blocked country will see.
+    kick-reason: "Your country is disallowed here"
+    # If true, the countries list will work as a whitelist, otherwise as a blacklist
+    whitelist: false
+    # Countries list (https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2)
+    countries:
+      - 'UG'

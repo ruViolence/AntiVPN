@@ -1,4 +1,4 @@
-package ru.violence.antivpn.common.checker;
+package ru.violence.antivpn.common.model;
 
 import com.google.gson.JsonObject;
 import lombok.Data;
