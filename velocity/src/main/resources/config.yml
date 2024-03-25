@@ -11,6 +11,8 @@ proxy-list:
     memory: 10 # 10 Minutes
 
   update-delay: 3600000 # 1 Hour
+  
+  pattern: '\b(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b'
 
   urls:
     - 'https://raw.githubusercontent.com/roosterkid/openproxylist/main/SOCKS4_RAW.txt'

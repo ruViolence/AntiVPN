@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.util.HashSet;
+import java.util.regex.Pattern;
 
 public class AntiVPNPlugin extends Plugin implements AntiVPN {
     private @Getter SQLite database;
@@ -72,6 +73,8 @@ public class AntiVPNPlugin extends Plugin implements AntiVPN {
         Config.ProxyList.CACHE_MEMORY = config.getLong("proxy-list.cache.memory");
 
         Config.ProxyList.UPDATE_DELAY = config.getLong("proxy-list.update-delay");
+
+        Config.ProxyList.PATTERN = Pattern.compile(config.getString("proxy-list.pattern"));
 
         Config.ProxyList.URLS = config.getStringList("proxy-list.urls");
 

@@ -4,6 +4,7 @@ import lombok.experimental.UtilityClass;
 
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 @UtilityClass
 public class Config {
@@ -16,6 +17,8 @@ public class Config {
         public static long CACHE_MEMORY;
 
         public static long UPDATE_DELAY;
+
+        public static Pattern PATTERN;
 
         public static List<String> URLS;
     }

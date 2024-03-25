@@ -14,6 +14,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
+import java.util.regex.Matcher;
 
 public class ProxyList implements AutoCloseable {
     private final @NotNull AntiVPN antiVPN;
@@ -94,10 +95,13 @@ public class ProxyList implements AutoCloseable {
                             String raw = Utils.readStringFromUrl(url);
 
                             for (String line : raw.split("\n+")) {
+                                line = line.trim();
                                 if (line.isEmpty()) continue;
-                                String[] split = line.split(":");
 
-                                String ip = split[0]; // Second part is port, we don't need it
+                                Matcher matcher = Config.ProxyList.PATTERN.matcher(line);
+                                if (!matcher.find()) continue;
+
+                                String ip = matcher.group(0);
                                 if (ip.isEmpty()) continue;
 
                                 ips.add(ip);

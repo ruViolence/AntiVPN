@@ -29,6 +29,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.logging.Logger;
+import java.util.regex.Pattern;
 
 @Plugin(id = "antivpn", name = "AntiVPN", version = BuildConstants.VERSION)
 public class AntiVPNPlugin implements AntiVPN {
@@ -94,6 +95,8 @@ public class AntiVPNPlugin implements AntiVPN {
         Config.ProxyList.CACHE_MEMORY = config.node("proxy-list", "cache", "memory").getLong();
 
         Config.ProxyList.UPDATE_DELAY = config.node("proxy-list", "update-delay").getLong();
+
+        Config.ProxyList.PATTERN = Pattern.compile(config.node("proxy-list", "pattern").getString());
 
         Config.ProxyList.URLS = config.node("proxy-list", "urls").getList(TypeToken.get(String.class));
 
