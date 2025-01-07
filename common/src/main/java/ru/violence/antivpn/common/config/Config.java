@@ -32,6 +32,9 @@ public class Config {
         public static boolean DENY_HOSTING;
         public static boolean DENY_PROXY;
 
+        public static Set<String> BYPASS_COUNTRIES_HOSTING;
+        public static Set<String> BYPASS_COUNTRIES_PROXY;
+
         public static long RESULT_AWAIT;
 
         public static boolean FORCE_CHECK_ENABLED;

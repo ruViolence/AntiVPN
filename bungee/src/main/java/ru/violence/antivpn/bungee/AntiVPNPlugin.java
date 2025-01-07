@@ -86,6 +86,9 @@ public class AntiVPNPlugin extends Plugin implements AntiVPN {
         Config.IpApi.DENY_HOSTING = config.getBoolean("ipapi.deny.hosting");
         Config.IpApi.DENY_PROXY = config.getBoolean("ipapi.deny.proxy");
 
+        Config.IpApi.BYPASS_COUNTRIES_HOSTING = new HashSet<>(config.getStringList("ipapi.bypass-countries.hosting"));
+        Config.IpApi.BYPASS_COUNTRIES_PROXY = new HashSet<>(config.getStringList("ipapi.bypass-countries.proxy"));
+
         Config.IpApi.RESULT_AWAIT = config.getLong("ipapi.result-await");
 
         Config.IpApi.FORCE_CHECK_ENABLED = config.getBoolean("ipapi.force-check.enabled");

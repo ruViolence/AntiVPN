@@ -58,10 +58,12 @@ public class IPAPIChecker implements IPCheck {
         }
 
         if (Config.IpApi.DENY_HOSTING && result.isHosting()) {
+            if (Config.IpApi.BYPASS_COUNTRIES_HOSTING.contains(result.getCountryCode())) return;
             throw new HostingBlockedException(result);
         }
 
         if (Config.IpApi.DENY_PROXY && result.isProxy()) {
+            if (Config.IpApi.BYPASS_COUNTRIES_PROXY.contains(result.getCountryCode())) return;
             throw new ProxyBlockedException(result);
         }
 

@@ -31,6 +31,11 @@ ipapi:
   deny:
     hosting: true
     proxy: true
+  
+  # List of bypassed countries
+  bypass-countries:
+    hosting: [ ]
+    proxy: [ ]
 
   # How long to wait in milliseconds when a player connects.
   # It is not recommended to set this value to 50 or higher, as it creates lags for some other players.
