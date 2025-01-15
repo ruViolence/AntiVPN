@@ -40,18 +40,16 @@ public class SQLite implements AutoCloseable {
     private void createTables() {
         synchronized (connection) {
             try (Statement st = connection.createStatement()) {
-                st.execute("CREATE TABLE IF NOT EXISTS `ipapi_cache`(`id` INTEGER NOT NULL UNIQUE, `ip` TEXT NOT NULL UNIQUE, `result` TEXT NOT NULL, `since` INTEGER NOT NULL, PRIMARY KEY (`id` AUTOINCREMENT));");
-                st.execute("CREATE UNIQUE INDEX IF NOT EXISTS `ipapi_cache_ip` ON `ipapi_cache` (`ip`);");
+                st.execute("CREATE TABLE IF NOT EXISTS `ipapi_cache`(`ip` TEXT NOT NULL PRIMARY KEY, `result` TEXT NOT NULL, `since` INTEGER NOT NULL);");
                 st.execute("CREATE INDEX IF NOT EXISTS `ipapi_cache_since` ON `ipapi_cache` (`since`);");
 
-                st.execute("CREATE TABLE IF NOT EXISTS `proxylist_cache`(`id` INTEGER NOT NULL UNIQUE, `ip` TEXT NOT NULL UNIQUE, `since` INTEGER NOT NULL, PRIMARY KEY (`id` AUTOINCREMENT));");
-                st.execute("CREATE UNIQUE INDEX IF NOT EXISTS `proxylist_cache_ip` ON `proxylist_cache` (`ip`);");
+                st.execute("CREATE TABLE IF NOT EXISTS `proxylist_cache`(`ip` TEXT NOT NULL PRIMARY KEY, `since` INTEGER NOT NULL);");
                 st.execute("CREATE INDEX IF NOT EXISTS `proxylist_cache_since` ON `proxylist_cache` (`since`);");
 
-                st.execute("CREATE TABLE IF NOT EXISTS `block`(`id` INTEGER NOT NULL UNIQUE, `type` TEXT NOT NULL, `value` TEXT NOT NULL, `since` INTEGER NOT NULL, PRIMARY KEY(`id` AUTOINCREMENT));");
+                st.execute("CREATE TABLE IF NOT EXISTS `block`(`type` TEXT NOT NULL, `value` TEXT NOT NULL, `since` INTEGER NOT NULL, PRIMARY KEY(`type`, `value`));");
                 st.execute("CREATE INDEX IF NOT EXISTS `block_type_value` ON `block` (`type`, `value`);");
 
-                st.execute("CREATE TABLE IF NOT EXISTS `bypass`(`id` INTEGER NOT NULL UNIQUE, `type` TEXT NOT NULL, `value` TEXT NOT NULL, `since` INTEGER NOT NULL, PRIMARY KEY(`id` AUTOINCREMENT));");
+                st.execute("CREATE TABLE IF NOT EXISTS `bypass`(`type` TEXT NOT NULL, `value` TEXT NOT NULL, `since` INTEGER NOT NULL, PRIMARY KEY(`type`, `value`));");
                 st.execute("CREATE INDEX IF NOT EXISTS `bypass_type_value` ON `bypass` (`type`, `value`);");
             }
         }
@@ -120,7 +118,7 @@ public class SQLite implements AutoCloseable {
     @SneakyThrows
     public boolean isBlocked(@NotNull FieldType type, @NotNull String value) {
         synchronized (connection) {
-            try (PreparedStatement ps = connection.prepareStatement("SELECT `id` FROM `block` WHERE `type` = ? AND `value` = ?")) {
+            try (PreparedStatement ps = connection.prepareStatement("SELECT `type` FROM `block` WHERE `type` = ? AND `value` = ?")) {
                 ps.setString(1, type.toKey());
                 ps.setString(2, value);
                 ResultSet rs = ps.executeQuery();
@@ -132,7 +130,7 @@ public class SQLite implements AutoCloseable {
     @SneakyThrows
     public boolean isBypassed(@NotNull FieldType type, @NotNull String value) {
         synchronized (connection) {
-            try (PreparedStatement ps = connection.prepareStatement("SELECT `id` FROM `bypass` WHERE `type` = ? AND `value` = ?")) {
+            try (PreparedStatement ps = connection.prepareStatement("SELECT `type` FROM `bypass` WHERE `type` = ? AND `value` = ?")) {
                 ps.setString(1, type.toKey());
                 ps.setString(2, value);
                 ResultSet rs = ps.executeQuery();
