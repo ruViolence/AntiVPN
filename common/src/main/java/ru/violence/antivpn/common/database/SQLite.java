@@ -16,8 +16,11 @@ import java.sql.Statement;
 import java.util.logging.Level;
 
 public class SQLite implements AutoCloseable {
+    private static final long COMMIT_INTERVAL = 60_000; // 1 minute
+
     private final AntiVPN antiVPN;
     private final Connection connection;
+    private volatile boolean running = true;
 
     @SneakyThrows
     public SQLite(@NotNull AntiVPN antiVPN) {
@@ -25,9 +28,12 @@ public class SQLite implements AutoCloseable {
 
         Class.forName("org.sqlite.JDBC");
         this.connection = DriverManager.getConnection("jdbc:sqlite://" + antiVPN.getDataFolder().getAbsolutePath() + "/data.db");
+        this.connection.setAutoCommit(false);
         createTables();
+        connection.commit();
 
         new CacheCleanThread().start();
+        new CommitThread().start();
     }
 
     @SneakyThrows
@@ -54,8 +60,12 @@ public class SQLite implements AutoCloseable {
     @SneakyThrows
     @Override
     public void close() {
+        running = false;
         synchronized (connection) {
-            connection.close();
+            if (!connection.isClosed()) {
+                connection.commit();
+                connection.close();
+            }
         }
     }
 
@@ -185,6 +195,30 @@ public class SQLite implements AutoCloseable {
             try (PreparedStatement ps = connection.prepareStatement("DELETE FROM `ipapi_cache` WHERE `ip` = ?")) {
                 ps.setString(1, ip);
                 return ps.executeUpdate() != 0;
+            }
+        }
+    }
+
+    private class CommitThread extends Thread {
+        public CommitThread() {
+            super("AntiVPN-CommitThread");
+            setDaemon(true);
+        }
+
+        @Override
+        @SneakyThrows
+        public void run() {
+            while (running) {
+                try {
+                    Thread.sleep(COMMIT_INTERVAL);
+                    synchronized (connection) {
+                        if (!connection.isClosed()) {
+                            connection.commit();
+                        }
+                    }
+                } catch (Exception e) {
+                    antiVPN.getLogger().log(Level.SEVERE, "Error in commit thread", e);
+                }
             }
         }
     }
