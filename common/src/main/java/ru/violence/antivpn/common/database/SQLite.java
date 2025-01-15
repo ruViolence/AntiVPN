@@ -192,6 +192,7 @@ public class SQLite implements AutoCloseable {
     private class CacheCleanThread extends Thread {
         public CacheCleanThread() {
             super("AntiVPN - Database Cache Clean Thread");
+            setDaemon(true);
         }
 
         @SuppressWarnings("BusyWait")
