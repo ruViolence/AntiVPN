@@ -57,6 +57,14 @@ public class IPAPIChecker implements IPCheck {
             throw BypassedException.INSTANCE;
         }
 
+        if (database.isBlocked(FieldType.PLAYER_NAME, playerName) ||
+            database.isBlocked(FieldType.ISP, result.getIsp()) ||
+            database.isBlocked(FieldType.ORG, result.getOrg()) ||
+            database.isBlocked(FieldType.AS, result.getAs()) ||
+            database.isBlocked(FieldType.ASNAME, result.getAsname())) {
+            throw new ManuallyBlockedException(result);
+        }
+
         if (Config.IpApi.DENY_HOSTING && result.isHosting()) {
             if (Config.IpApi.BYPASS_COUNTRIES_HOSTING.contains(result.getCountryCode())) return;
             throw new HostingBlockedException(result);
@@ -65,14 +73,6 @@ public class IPAPIChecker implements IPCheck {
         if (Config.IpApi.DENY_PROXY && result.isProxy()) {
             if (Config.IpApi.BYPASS_COUNTRIES_PROXY.contains(result.getCountryCode())) return;
             throw new ProxyBlockedException(result);
-        }
-
-        if (database.isBlocked(FieldType.PLAYER_NAME, playerName) ||
-            database.isBlocked(FieldType.ISP, result.getIsp()) ||
-            database.isBlocked(FieldType.ORG, result.getOrg()) ||
-            database.isBlocked(FieldType.AS, result.getAs()) ||
-            database.isBlocked(FieldType.ASNAME, result.getAsname())) {
-            throw new ManuallyBlockedException(result);
         }
     }
 
